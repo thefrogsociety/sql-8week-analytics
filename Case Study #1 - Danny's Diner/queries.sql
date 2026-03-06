@@ -5,7 +5,7 @@ SELECT
   SUM(menu.price) AS total_spent
 FROM sales
 JOIN menu
-ON sales.product_id = m.product_id
+ON sales.product_id = menu.product_id
 GROUP BY sales.customer_id
 
 -- Question 2
