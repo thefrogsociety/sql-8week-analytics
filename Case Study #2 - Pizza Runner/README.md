@@ -10,6 +10,7 @@ The objective of this analysis is to explore, clean, and transform the available
 
 All datasets used in this analysis are located within the `Pizza Runner` database schema.
 ## Entity Relationship Diagram
+<img width="936" height="466" alt="pizza" src="https://github.com/user-attachments/assets/7a4805f5-79d8-429c-aa1b-701a25fc49f8" />
 ## Data Cleaning
 ### Table 2: customer_orders
 | order_id | customer_id | pizza_id | exclusions | extras | order_time |
