@@ -6,6 +6,7 @@ Danny wants to use the data to answer a few simple questions about his customers
 He plans on using these insights to help him decide whether he should expand the existing customer loyalty program - additionally he needs help to generate some basic datasets so his team can easily inspect the data without needing to use SQL.
 
 ## Entity Relationship Diagram
+<img width="604" height="360" alt="sushi" src="https://github.com/user-attachments/assets/bc02bc5d-7bfe-4d52-98e7-fa2d524b69c9" />
 
 ## Questions and Solutions
 
