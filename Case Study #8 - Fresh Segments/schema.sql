@@ -1,4 +1,3 @@
-Schema SQL Query SQL ResultsEdit on DB Fiddle
 CREATE SCHEMA fresh_segments;
 
 DROP TABLE IF EXISTS fresh_segments.json_data;
