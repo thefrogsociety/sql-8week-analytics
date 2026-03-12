@@ -193,7 +193,7 @@ WHERE purchase_rank = 1;
 
 | customer_id | first_after_mem |
 |-------------|-----------------|
-| A | ramen |
+| A | curry |
 | B | sushi |
 ### 7. Which item was purchased just before the customer became a member?
 ```sql
