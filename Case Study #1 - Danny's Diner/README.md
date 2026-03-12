@@ -181,7 +181,7 @@ JOIN members
   ON sales.customer_id = members.customer_id
 WHERE sales.order_date >= members.join_date
 ) t
-WHERE rank = 1;
+WHERE purchase_rank = 1;
 ```
 #### Steps
 
