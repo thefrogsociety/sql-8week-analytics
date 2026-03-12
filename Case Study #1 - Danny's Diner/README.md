@@ -86,8 +86,9 @@ WHERE sales.order_date = (
 | A | 2021-01-01 | curry |
 | B | 2021-01-01 | curry |
 | C | 2021-01-01 | ramen |
+| C | 2021-01-01 | ramen |
 
-I chose to keep both rows for customer A because the dataset only records the date of the purchase, not the exact time. On the earliest recorded date, customer A purchased two items, sushi and curry. Since both purchases happened on the same day, the data does not provide enough information to determine which one occurred first.
+I chose to keep both rows for customer A and C because the dataset only records the date of the purchase, not the exact time. Since both purchases of both customers happened on the same day, the data does not provide enough information to determine which one occurred first.
 
 Because of this limitation, I kept both results rather than forcing the query to return a single item. Doing so avoids introducing an arbitrary choice that the dataset itself cannot justify.
 Alternatively, if it absolutely requires to be only one item, here is the edited query:
