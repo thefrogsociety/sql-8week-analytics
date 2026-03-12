@@ -15,7 +15,9 @@ All datasets used in this analysis are located within the `Pizza Runner` databas
 
 ## Data Cleaning
 
-**Note**: This step normally involves profiling columns like exclusions and extras (using DISTINCT or GROUP BY) to identify inconsistent representations of missing data such as NULL, 'null', or 'NaN'. I skipped this step because the case study documentation already specifies these issues, so additional profiling would not add new information. I therefore proceeded directly to cleaning the values.
+**Note**: This step normally involves profiling columns like exclusions and extras (using DISTINCT or GROUP BY) to identify inconsistent representations of missing data such as NULL, 'null', or 'NaN'. I skipped this step because the case study documentation already specifies these issues, so additional profiling would not add new information. I therefore proceeded directly to cleaning the values. 
+
+Additionally, the original schema has an inconsistency: customer orders are dated in 2020, but all runners join in 2021. to align the data with runner availability and match the sample tables provided in the challenge, I adjusted the order dates to 2021.
 
 ### Table 2: customer_orders
 
