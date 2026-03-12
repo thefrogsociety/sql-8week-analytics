@@ -15,6 +15,9 @@ All datasets used in this analysis are located within the `Pizza Runner` databas
 
 ## Data Cleaning
 ### Table 2: customer_orders
+
+**Note**: This step normally involves profiling columns like exclusions and extras (using DISTINCT or GROUP BY) to identify inconsistent representations of missing data such as NULL, 'null', or 'NaN'. I skipped this step because the case study documentation already specifies these issues, so additional profiling would not add new information. I therefore proceeded directly to cleaning the values.
+
 | order_id | customer_id | pizza_id | exclusions | extras | order_time |
 |---------|-------------|----------|------------|--------|------------|
 | 1 | 101 | 1 |  |  | 2021-01-01 18:05:02 |
