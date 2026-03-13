@@ -347,9 +347,12 @@ ORDER BY order_count DESC;
 ##### Answer
 | day_of_week | order_count |
 |---|---|
-| Saturday | 5 |
-| Sunday | 4 |
-| Friday | 1 |
+| Friday   | 5 |
+| Monday   | 2 |
+| Saturday | 2 |
+| Sunday   | 1 |
+
+Most orders occur on Fridays, suggesting peak demand at the end of the work week. Monday and Saturday see moderate activity, while Sunday has the fewest orders, indicating low weekend demand. This could inform staffing and delivery planning.
 
 ### B. Runner and Customer Experience
 
