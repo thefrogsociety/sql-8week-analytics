@@ -377,8 +377,6 @@ ORDER BY signup_week;
 
 The majority of runners joined during the first week of operation. This suggests that the platform likely recruited an initial pool of delivery partners before launching, with fewer runners joining afterward. Such a pattern is common in early-stage delivery platforms where initial supply must be secured before demand grows.
 
----
-
 #### 2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
 
 ```sql
@@ -403,7 +401,7 @@ ORDER BY temp_runner_orders.runner_id;
 | 2 | 23.4 |
 | 3 | 10.5 |
 
-Runner 3 appears to reach the pickup location the fastest on average, while Runner 2 takes significantly longer. This could reflect geographic proximity to the restaurant, availability differences between runners, or scheduling patterns. In delivery systems, pickup latency is a critical operational metric because it directly affects customer waiting time.
+Runner 3 appears to reach the pickup location the fastest on average, while Runner 2 takes significantly longer. This could reflect geographic proximity to the restaurant, availability differences between runners, or scheduling patterns. This insight is important because it directly affects customer waiting time.
 
 ---
 
@@ -437,9 +435,7 @@ ORDER BY pizza_count;
 | 2 | 18 |
 | 3 | 29 |
 
-There appears to be a clear positive relationship between order size and preparation time. Larger orders naturally require more preparation effort in the kitchen, which increases the waiting time before pickup. This pattern is important operationally because batching multiple pizzas into one order may improve delivery efficiency but simultaneously increases kitchen workload and preparation delays.
-
----
+There appears to be a clear positive relationship between order size and preparation time. Larger orders naturally require more preparation effort in the kitchen, which increases the waiting time before pickup. Batching multiple pizzas into one order may improve delivery efficiency but simultaneously increases kitchen workload and preparation delays.
 
 #### 4. What was the average distance travelled for each customer?
 
@@ -465,9 +461,7 @@ ORDER BY temp_customer_orders.customer_id;
 | 104 | 10 |
 | 105 | 25 |
 
-Customer locations appear to vary substantially in distance from the restaurant. Customer 104 is located closest to the store, while Customer 105 appears to be the farthest away. In real delivery platforms, geographic distance strongly influences delivery costs, estimated delivery times, and sometimes delivery fees.
-
----
+Customer locations appear to vary substantially in distance from the restaurant. Customer 104 is located closest to the store, while Customer 105 appears to be the farthest away.
 
 #### 5. What was the difference between the longest and shortest delivery times for all orders?
 
@@ -484,7 +478,7 @@ WHERE cancellation IS NULL;
 |---|
 | 30 |
 
-Delivery times vary by as much as 30 minutes between the fastest and slowest orders. Such variability can arise from factors such as traffic conditions, delivery distance, route complexity, or delays during preparation. Large variability often signals opportunities for operational optimization.
+Delivery times vary by as much as 30 minutes between the fastest and slowest orders. 
 
 ---
 
@@ -512,9 +506,7 @@ ORDER BY runner_id, order_id;
 | 2 | 8 | 93.6 |
 | 3 | 5 | 40 |
 
-Average speeds differ significantly between deliveries, with some unusually high values. These extreme values may indicate inconsistencies in recorded duration or distance data. In practice, analysts would often investigate such outliers to verify data quality before drawing conclusions about delivery performance.
-
----
+Average speeds differ significantly between deliveries, with some unusually high values. These extreme values may indicate inconsistencies in recorded duration or distance data. 
 
 #### 7. What is the successful delivery percentage for each runner?
 
@@ -536,7 +528,7 @@ ORDER BY runner_id;
 | 2 | 75 |
 | 3 | 50 |
 
-Runner 1 successfully completed all assigned deliveries, indicating strong reliability. Runner 2 shows a moderate success rate, while Runner 3 appears to have the lowest completion rate. In real delivery operations, such metrics are often used to monitor runner performance and may influence future order allocation or incentives.
+Runner 1 successfully completed all assigned deliveries, indicating strong reliability. Runner 2 shows a moderate success rate, while Runner 3 appears to have the lowest completion rate. This metric can be used to influence future order allocation or incentives.
 
 
 ### C. Ingredient Optimisation
@@ -545,13 +537,15 @@ Runner 1 successfully completed all assigned deliveries, indicating strong relia
 
 ```sql
 SELECT
-pizza_names.pizza_name,
-pizza_toppings.topping_name
+    pizza_names.pizza_name,
+    pizza_toppings.topping_name
 FROM pizza_recipes
 JOIN pizza_names
-ON pizza_recipes.pizza_id = pizza_names.pizza_id
+    ON pizza_recipes.pizza_id = pizza_names.pizza_id
+JOIN LATERAL unnest(string_to_array(pizza_recipes.toppings, ', ')) AS topping_ids(topping)
+    ON TRUE
 JOIN pizza_toppings
-ON pizza_recipes.toppings::INTEGER = pizza_toppings.topping_id
+    ON topping::INTEGER = pizza_toppings.topping_id
 ORDER BY pizza_names.pizza_name;
 ```
 
@@ -574,9 +568,7 @@ ORDER BY pizza_names.pizza_name;
 | Vegetarian | Tomatoes |
 | Vegetarian | Tomato Sauce |
 
-The Meat Lovers pizza contains a large number of protein toppings, while the Vegetarian pizza focuses primarily on vegetable-based ingredients. The difference reflects two distinct menu strategies: one maximizing richness and protein density, the other emphasizing freshness and plant-based variety.
-
----
+I normalized the toppings column so it could be joined properly. Since the field stores multiple topping IDs as a comma-separated string, I used string_to_array and unnest to split it into individual rows. This allowed me to cast each topping ID to an integer and join it with pizza_toppings to retrieve the corresponding topping names.
 
 #### 2. What was the most commonly added extra?
 
@@ -598,7 +590,7 @@ LIMIT 1;
 |---|---|
 | Bacon | 4 |
 
-Bacon appears to be the most frequently requested extra ingredient. This suggests customers tend to increase the richness of their pizzas rather than adding vegetables, reinforcing the general popularity of high-fat savory toppings in customizable menu items.
+Bacon appears to be the most frequently requested extra ingredient. This suggests prioritizing higher stock levels of bacon and considering the inclusion of more savory toppings in customizable menu offerings.
 
 ---
 
@@ -606,11 +598,13 @@ Bacon appears to be the most frequently requested extra ingredient. This suggest
 
 ```sql
 SELECT
-pizza_toppings.topping_name,
-COUNT(*) AS exclusion_count
+    pizza_toppings.topping_name,
+    COUNT(*) AS exclusion_count
 FROM temp_customer_orders
+JOIN LATERAL unnest(string_to_array(temp_customer_orders.exclusions, ', ')) AS exclusion_ids(id)
+    ON TRUE
 JOIN pizza_toppings
-ON temp_customer_orders.exclusions::INTEGER = pizza_toppings.topping_id
+    ON id::INTEGER = pizza_toppings.topping_id
 GROUP BY pizza_toppings.topping_name
 ORDER BY exclusion_count DESC
 LIMIT 1;
@@ -620,49 +614,55 @@ LIMIT 1;
 
 | topping_name | exclusion_count |
 |---|---|
-| Cheese | 2 |
+| Cheese | 4 |
 
-Cheese appears to be the most commonly excluded ingredient. This may reflect dietary restrictions such as lactose intolerance or personal preferences for lighter pizzas.
-
----
+Cheese appears to be the most commonly excluded ingredient. This may reflect dietary restrictions such as lactose intolerance or personal preferences.
 
 #### 4. Generate an order item description for each record in the customer_orders table
 
 ```sql
 SELECT
-CASE
-WHEN exclusions = '' AND extras = ''
-THEN pizza_names.pizza_name
-
-WHEN exclusions <> '' AND extras = ''
-THEN pizza_names.pizza_name || ' - Exclude ' || exclusions
-
-WHEN exclusions = '' AND extras <> ''
-THEN pizza_names.pizza_name || ' - Extra ' || extras
-
-ELSE pizza_names.pizza_name || ' - Exclude ' || exclusions || ' - Extra ' || extras
-END AS order_description
+    pizza_names.pizza_name AS pizza,
+    exclusion_names AS exclusions,
+    extra_names AS extras
 FROM temp_customer_orders
+
 JOIN pizza_names
-ON temp_customer_orders.pizza_id = pizza_names.pizza_id;
+ON temp_customer_orders.pizza_id = pizza_names.pizza_id
+
+LEFT JOIN LATERAL (
+    SELECT string_agg(pizza_toppings.topping_name, ', ') AS exclusion_names
+    FROM unnest(string_to_array(temp_customer_orders.exclusions, ', ')) AS id
+    JOIN pizza_toppings
+    ON id::INTEGER = pizza_toppings.topping_id
+) e ON TRUE
+
+LEFT JOIN LATERAL (
+    SELECT string_agg(pizza_toppings.topping_name, ', ') AS extra_names
+    FROM unnest(string_to_array(temp_customer_orders.extras, ', ')) AS id
+    JOIN pizza_toppings
+    ON id::INTEGER = pizza_toppings.topping_id
+) x ON TRUE;
 ```
 
 ##### Answer
 
-| order_description |
-|---|
-| Meat Lovers |
-| Meat Lovers |
-| Vegetarian |
-| Meat Lovers - Exclude Cheese |
-| Meat Lovers - Extra Bacon |
-| Vegetarian |
-| Meat Lovers |
-| Meat Lovers - Extra Bacon |
-| Vegetarian - Exclude Onion |
-| Meat Lovers |
-
-This step transforms structured data into a human-readable format. In real ordering systems, similar transformations are used to generate kitchen tickets or delivery summaries that staff can quickly interpret.
+| pizza | exclusions | extras |
+|---|---|---|
+| Meatlovers | BBQ Sauce, Mushrooms | Bacon, Cheese |
+| Meatlovers |  |  |
+| Meatlovers | Cheese | Bacon, Chicken |
+| Meatlovers |  |  |
+| Meatlovers |  | Bacon |
+| Meatlovers | Cheese |  |
+| Meatlovers | Cheese |  |
+| Meatlovers |  |  |
+| Meatlovers |  |  |
+| Meatlovers |  |  |
+| Vegetarian |  | Bacon |
+| Vegetarian |  |  |
+| Vegetarian | Cheese |  |
+| Vegetarian |  |  |
 
 ---
 
@@ -670,35 +670,31 @@ This step transforms structured data into a human-readable format. In real order
 
 ```sql
 SELECT
-pizza_names.pizza_name || ': ' ||
-STRING_AGG(
-CASE
-WHEN ingredient_count > 1
-THEN ingredient_count || 'x' || topping_name
-ELSE topping_name
-END,
-', ' ORDER BY topping_name
-) AS ingredient_list
-FROM
-(
-SELECT
-temp_customer_orders.order_id,
-pizza_names.pizza_name,
-pizza_toppings.topping_name,
-COUNT(*) AS ingredient_count
-FROM temp_customer_orders
+pizza_names.pizza_name || ': ' || ingredient_list AS ingredient_list
+FROM pizza_names
+
 JOIN pizza_recipes
-ON temp_customer_orders.pizza_id = pizza_recipes.pizza_id
-JOIN pizza_toppings
-ON pizza_recipes.toppings::INTEGER = pizza_toppings.topping_id
-JOIN pizza_names
-ON temp_customer_orders.pizza_id = pizza_names.pizza_id
-GROUP BY
-temp_customer_orders.order_id,
-pizza_names.pizza_name,
-pizza_toppings.topping_name
-) AS ingredient_summary
-GROUP BY pizza_names.pizza_name;
+ON pizza_names.pizza_id = pizza_recipes.pizza_id
+
+LEFT JOIN LATERAL (
+    SELECT STRING_AGG(
+        CASE
+            WHEN ingredient_count > 1
+                THEN ingredient_count || 'x' || topping_name
+            ELSE topping_name
+        END,
+        ', ' ORDER BY topping_name
+    ) AS ingredient_list
+    FROM (
+        SELECT
+            pizza_toppings.topping_name,
+            COUNT(*) AS ingredient_count
+        FROM unnest(string_to_array(pizza_recipes.toppings, ', ')) AS id
+        JOIN pizza_toppings
+        ON id::INTEGER = pizza_toppings.topping_id
+        GROUP BY pizza_toppings.topping_name
+    ) ingredient_counts
+) ingredients ON TRUE;
 ```
 
 ##### Answer
@@ -708,10 +704,6 @@ GROUP BY pizza_names.pizza_name;
 | Meat Lovers: Bacon, BBQ Sauce, Beef, Cheese, Chicken, Mushroom, Pepperoni, Salami |
 | Vegetarian: Cheese, Mushroom, Onion, Peppers, Tomatoes, Tomato Sauce |
 
-This representation mimics how kitchen preparation systems often display ingredient lists. Alphabetical ordering improves readability and helps staff quickly verify whether all required ingredients are present.
-
----
-
 #### 6. What is the total quantity of each ingredient used in all delivered pizzas?
 
 ```sql
@@ -719,13 +711,21 @@ SELECT
 pizza_toppings.topping_name,
 COUNT(*) AS total_used
 FROM temp_customer_orders
+
 JOIN temp_runner_orders
 ON temp_customer_orders.order_id = temp_runner_orders.order_id
+
 JOIN pizza_recipes
 ON temp_customer_orders.pizza_id = pizza_recipes.pizza_id
+
+JOIN LATERAL unnest(string_to_array(pizza_recipes.toppings, ', ')) AS topping_ids(id)
+ON TRUE
+
 JOIN pizza_toppings
-ON pizza_recipes.toppings::INTEGER = pizza_toppings.topping_id
+ON id::INTEGER = pizza_toppings.topping_id
+
 WHERE temp_runner_orders.cancellation IS NULL
+
 GROUP BY pizza_toppings.topping_name
 ORDER BY total_used DESC;
 ```
@@ -735,20 +735,17 @@ ORDER BY total_used DESC;
 | topping_name | total_used |
 |---|---|
 | Cheese | 12 |
-| Bacon | 10 |
+| Mushrooms | 12 |
+| Salami | 9 |
+| Bacon | 9 |
+| BBQ Sauce | 9 |
 | Beef | 9 |
-| Mushroom | 8 |
-| Pepperoni | 7 |
-| Salami | 7 |
-| Chicken | 6 |
-| BBQ Sauce | 6 |
-| Onion | 3 |
-| Peppers | 3 |
-| Tomatoes | 3 |
+| Pepperoni | 9 |
+| Chicken | 9 |
 | Tomato Sauce | 3 |
-
-Cheese is the most frequently used ingredient across all delivered pizzas, reflecting its role as the foundational component of most pizza recipes. Meat-based toppings dominate the higher ranks as well, indicating that meat-heavy pizzas account for a significant share of total orders.
-
+| Onions | 3 |
+| Tomatoes | 3 |
+| Peppers | 3 |
 
 ### D. Pricing and Ratings
 
