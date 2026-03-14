@@ -754,17 +754,19 @@ ORDER BY total_used DESC;
 ```sql
 SELECT
 SUM(
-CASE
-WHEN pizza_names.pizza_name = 'Meat Lovers' THEN 12
-WHEN pizza_names.pizza_name = 'Vegetarian' THEN 10
-END
+    CASE
+        WHEN pizza_names.pizza_name = 'Meatlovers' THEN 12
+        WHEN pizza_names.pizza_name = 'Vegetarian' THEN 10
+    END
 ) AS total_revenue
 FROM temp_customer_orders
-JOIN temp_runner_orders
-ON temp_customer_orders.order_id = temp_runner_orders.order_id
 JOIN pizza_names
 ON temp_customer_orders.pizza_id = pizza_names.pizza_id
-WHERE temp_runner_orders.cancellation IS NULL;
+WHERE temp_customer_orders.order_id IN (
+    SELECT order_id
+    FROM temp_runner_orders
+    WHERE cancellation IS NULL
+);
 ```
 
 ##### Answer
@@ -773,31 +775,29 @@ WHERE temp_runner_orders.cancellation IS NULL;
 |---|
 | 138 |
 
-Pizza Runner generated **$138 in revenue** from all successfully delivered pizzas. Since delivery fees and extras are excluded, this value reflects only the base menu price. The result highlights how revenue in a food delivery business primarily depends on completed deliveries rather than total orders placed.
-
----
-
 #### 2. What if there was an additional $1 charge for any pizza extras?
 
 ```sql
 SELECT
 SUM(
-CASE
-WHEN pizza_names.pizza_name = 'Meat Lovers' THEN 12
-WHEN pizza_names.pizza_name = 'Vegetarian' THEN 10
-END
-+
-CASE
-WHEN temp_customer_orders.extras <> '' THEN 1
-ELSE 0
-END
+    CASE
+        WHEN pizza_names.pizza_name = 'Meatlovers' THEN 12
+        WHEN pizza_names.pizza_name = 'Vegetarian' THEN 10
+    END
+    +
+    COALESCE(
+        array_length(string_to_array(NULLIF(temp_customer_orders.extras, ''), ', '), 1),
+        0
+    )
 ) AS total_revenue_with_extras
 FROM temp_customer_orders
-JOIN temp_runner_orders
-ON temp_customer_orders.order_id = temp_runner_orders.order_id
 JOIN pizza_names
 ON temp_customer_orders.pizza_id = pizza_names.pizza_id
-WHERE temp_runner_orders.cancellation IS NULL;
+WHERE temp_customer_orders.order_id IN (
+    SELECT order_id
+    FROM temp_runner_orders
+    WHERE cancellation IS NULL
+);
 ```
 
 ##### Answer
@@ -806,31 +806,31 @@ WHERE temp_runner_orders.cancellation IS NULL;
 |---|
 | 142 |
 
-Adding a small surcharge for extras increases revenue slightly. The change is modest because relatively few orders include additional toppings. In real delivery platforms, small optional add-ons often accumulate into meaningful revenue streams when applied at scale.
-
----
+Adding a small surcharge for extras increases revenue slightly. The change is modest because relatively few orders include additional toppings.
 
 #### 3. Add cheese is $1 extra.
 
 ```sql
 SELECT
 SUM(
-CASE
-WHEN pizza_names.pizza_name = 'Meat Lovers' THEN 12
-WHEN pizza_names.pizza_name = 'Vegetarian' THEN 10
-END
-+
-CASE
-WHEN temp_customer_orders.extras = '4' THEN 1
-ELSE 0
-END
+    CASE
+        WHEN pizza_names.pizza_name = 'Meat Lovers' THEN 12
+        WHEN pizza_names.pizza_name = 'Vegetarian' THEN 10
+    END
+    +
+    CASE
+        WHEN temp_customer_orders.extras = '4' THEN 1
+        ELSE 0
+    END
 ) AS total_revenue_with_cheese_extra
 FROM temp_customer_orders
-JOIN temp_runner_orders
-ON temp_customer_orders.order_id = temp_runner_orders.order_id
 JOIN pizza_names
 ON temp_customer_orders.pizza_id = pizza_names.pizza_id
-WHERE temp_runner_orders.cancellation IS NULL;
+WHERE temp_customer_orders.order_id IN (
+    SELECT order_id
+    FROM temp_runner_orders
+    WHERE cancellation IS NULL
+);
 ```
 
 ##### Answer
@@ -838,10 +838,6 @@ WHERE temp_runner_orders.cancellation IS NULL;
 | total_revenue_with_cheese_extra |
 |---|
 | 139 |
-
-Charging specifically for extra cheese produces a smaller revenue increase compared with charging for all extras. This suggests that cheese additions occur less frequently than other toppings in this dataset.
-
----
 
 #### 4. The Pizza Runner team now wants to add a ratings system that allows customers to rate their runner.
 
@@ -869,12 +865,6 @@ VALUES
 (8,2,5),
 (10,1,5);
 ```
-
-##### Answer
-
-The new `runner_ratings` table introduces customer feedback into the dataset. Ratings provide a qualitative measure of delivery performance that complements operational metrics such as speed or completion rate.
-
----
 
 #### 5. Produce a dataset combining operational and rating information
 
@@ -915,29 +905,35 @@ ORDER BY temp_customer_orders.order_id;
 | customer_id | order_id | runner_id | rating | order_time | pickup_time | time_to_pickup_minutes | delivery_duration | average_speed_kmh | total_pizzas |
 |---|---|---|---|---|---|---|---|---|---|
 
-This combined dataset brings together operational efficiency and customer satisfaction. Such integrated views are common in analytics dashboards where companies analyze whether delivery speed, preparation time, or order size influences customer ratings.
-
----
-
 #### 6. If Meat Lovers pizzas are $12 and Vegetarian pizzas are $10 and runners are paid $0.30 per kilometre travelled, how much money does Pizza Runner have left over?
 
 ```sql
 SELECT
-SUM(
-CASE
-WHEN pizza_names.pizza_name = 'Meat Lovers' THEN 12
-WHEN pizza_names.pizza_name = 'Vegetarian' THEN 10
-END
-) 
+(
+    SELECT
+    SUM(
+        CASE
+            WHEN pizza_names.pizza_name = 'Meatlovers' THEN 12
+            WHEN pizza_names.pizza_name = 'Vegetarian' THEN 10
+        END
+    )
+    FROM temp_customer_orders
+    JOIN pizza_names
+    ON temp_customer_orders.pizza_id = pizza_names.pizza_id
+    WHERE temp_customer_orders.order_id IN (
+        SELECT order_id
+        FROM temp_runner_orders
+        WHERE cancellation IS NULL
+    )
+)
 -
-SUM(temp_runner_orders.distance * 0.30)
-AS remaining_profit
-FROM temp_customer_orders
-JOIN temp_runner_orders
-ON temp_customer_orders.order_id = temp_runner_orders.order_id
-JOIN pizza_names
-ON temp_customer_orders.pizza_id = pizza_names.pizza_id
-WHERE temp_runner_orders.cancellation IS NULL;
+(
+    SELECT
+    SUM(distance * 0.30)
+    FROM temp_runner_orders
+    WHERE cancellation IS NULL
+)
+AS remaining_profit;
 ```
 
 ##### Answer
@@ -946,7 +942,7 @@ WHERE temp_runner_orders.cancellation IS NULL;
 |---|
 | 94.4 |
 
-After paying runners based on distance travelled, Pizza Runner retains **$94.40** from the completed deliveries. This simplified calculation illustrates the core economic tension in delivery platforms: revenue comes from food sales while costs are driven by distance and logistics.
+---
 
 ### Bonus Questions
 
@@ -954,16 +950,12 @@ The current schema supports menu expansion without structural changes because pi
 
 To add a new **Supreme pizza with all toppings**, we simply insert a new pizza into `pizza_names` and define its toppings in `pizza_recipes`.
 
----
-
 #### 1. Insert the new pizza into the pizza_names table
 
 ```sql
 INSERT INTO pizza_names (pizza_id, pizza_name)
 VALUES (3, 'Supreme');
 ```
-
----
 
 #### 2. Insert all toppings into pizza_recipes
 
@@ -990,9 +982,5 @@ The Supreme pizza includes **all toppings**, so we insert them as a comma-separa
 INSERT INTO pizza_recipes (pizza_id, toppings)
 VALUES (3, '1,2,3,4,5,6,7,8,9,10,11,12');
 ```
-
----
-
-##### Explanation
 
 Because the database separates pizzas from toppings, adding a new pizza only requires inserting new rows. The existing schema already supports menu growth without redesigning tables or changing queries.
