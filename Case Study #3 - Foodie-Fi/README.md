@@ -10,10 +10,116 @@ Danny created Foodie-Fi with a data driven mindset and wanted to ensure all futu
 
 ## Entity Relationship Diagram
 ## Data Cleaning
+## Data Cleaning and Initial Exploration
+
+Before starting the analysis, I first performed several exploratory checks to understand the structure and integrity of the dataset. The goal of this stage was to identify potential structural issues before applying any transformations.
+
+### 1. Validate Table Size
+
+The first step was to verify that the tables were loaded correctly and to understand the approximate scale of the dataset.
+
+```sql
+SELECT COUNT(*) AS subscriptions_rows
+FROM subscriptions;
+```
+| subscriptions_rows|
+|-------------------|
+|               2650|
+```sql
+SELECT COUNT(*) AS plans_rows
+FROM plans;
+```
+| plans_rows|
+|-----------|
+|          5|
+
+### 2. Inspect Categorical Values
+
+Next, I examined the distinct values present in key categorical columns. In the `subscriptions` table, `plan_id` represents the subscription tier, so checking its distinct values helps confirm that only valid plan identifiers appear. This step acts as a basic sanity check. Unexpected values here could indicate data entry errors or inconsistencies in the dataset.
+
+
+```sql
+SELECT DISTINCT
+plan_id
+FROM subscriptions
+ORDER BY plan_id;
+```
+| plan_id|
+|--------|
+|       0|
+|       1|
+|       2|
+|       3|
+|       4|
+
+### 3. Verify Key Integrity
+
+Since the `plans` table functions as a dimension table, each `plan_id` should uniquely correspond to a specific plan. I therefore reviewed the table to confirm whether duplicate keys existed.
+
+```sql
+SELECT
+plan_id,
+plan_name
+FROM plans
+ORDER BY plan_id;
+```
+| plan_id |   plan_name|
+|---------|------------|
+|       0 | trial|
+|       1 | basic monthly|
+|       2 | pro monthly|
+|       3 | pro annual|
+|       4 | churn|
+
+If the same `plan_id` appears multiple times, it can cause joins with other tables to produce duplicated rows.
+
+---
+
+### 4. Check for Duplicate Subscription Events
+
+The `subscriptions` table represents a timeline of subscription events. Ideally, each combination of `customer_id`, `plan_id`, and `start_date` should represent a single event.
+
+```sql
+SELECT COUNT(*) AS total_rows,
+COUNT(DISTINCT (customer_id, plan_id, start_date)) AS unique_events
+FROM subscriptions;
+```
+
+| total_rows | unique_events|
+|------------|--------------|
+|       2650 |          2650|
+
+### 5. Check for NULL values
+Subscription events should normally have all fields present.
+```
+SELECT *
+FROM subscriptions
+WHERE customer_id IS NULL
+   OR plan_id IS NULL
+   OR start_date IS NULL;
+```
+
+### . Validate Temporal Coverage
+
+Because the dataset tracks subscription activity over time, I also checked the overall date range to understand the time span covered by the data.
+
+```sql
+SELECT
+MIN(start_date) AS earliest_date,
+MAX(start_date) AS latest_date
+FROM subscriptions;
+```
+| earliest_date | latest_date|
+|---------------|------------|
+| 2020-01-01    | 2021-04-30 |
+
 ## Questions and Solutions
+
 ### A. Customer Journey
-Based off the 8 sample customers provided in the sample from the subscriptions table, write a brief description about each customer’s onboarding journey.
-Try to keep it as short as possible - you may also want to run some sort of join to make your explanations a bit easier!
+
+> Based off the 8 sample customers provided in the sample from the subscriptions table, write a brief description about each customer’s onboarding journey.
+> Try to keep it as short as possible - you may also want to run some sort of join to make your explanations a bit easier!
+
 ```sql
 SELECT
 subscriptions.customer_id,
@@ -49,8 +155,6 @@ ORDER BY subscriptions.customer_id, subscriptions.start_date;
 | 8 | trial | 2020-06-11 |
 | 8 | basic monthly | 2020-06-18 |
 | 8 | pro monthly | 2020-08-03 |
-
----
 
 #### Customer onboarding journeys
 
@@ -88,8 +192,11 @@ Looking at the first 8 customers, I notice every customer begins with the **tria
 
 **Some customers churn after trying the paid plan**, while others continue upgrading their subscriptions over time. This shows that users respond to the trial in different ways—some commit quickly, some explore gradually, and some decide the service is not worth continuing.
 
+---
 ### B. Data Analysis Questions
+
 #### 1. How many customers has Foodie-Fi ever had?
+
 ```sql
 SELECT COUNT(DISTINCT customer_id) AS total_customers
 FROM subscriptions;
@@ -99,7 +206,7 @@ FROM subscriptions;
 |---|
 | 1000 |
 
-#### 2. What is the monthly distribution of trial plan start_date values for our dataset - use the start of the month as the group by value
+#### 2. What is the monthly distribution of trial plan `start_date` values for our dataset - use the start of the month as the group by value
 
 ```sql
 SELECT
@@ -128,7 +235,7 @@ ORDER BY month;
 | 2020-11-01 | 75 |
 | 2020-12-01 | 84 |
 
-#### 3. What plan start_date values occur after the year 2020 for our dataset? Show the breakdown by count of events for each plan_name
+#### 3. What plan `start_date` values occur after the year 2020 for our dataset? Show the breakdown by count of events for each plan_name
 
 ```sql
 SELECT
@@ -185,7 +292,7 @@ FROM subscriptions
 )
 
 SELECT
-COUNT(*) AS customers,
+COUNT(*) AS customers_trial_churn,
 ROUND(
 100.0 * COUNT(*) /
 (SELECT COUNT(DISTINCT customer_id) FROM subscriptions)
@@ -197,7 +304,7 @@ AND next_plan = 4;
 
 ##### Answer
 
-| customers | percentage |
+| customers_trial_churn | percentage |
 |---|---|
 | 92 | 9 |
 
@@ -238,8 +345,6 @@ ORDER BY customers DESC;
 | pro monthly | 325 | 32.5 |
 | churn | 92 | 9.2 |
 | pro annual | 37 | 3.7 |
-
----
 
 #### 7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
 
@@ -282,8 +387,6 @@ ORDER BY customers DESC;
 | pro annual | 195 | 19.5 |
 | trial | 19 | 1.9 |
 
----
-
 #### 8. How many customers have upgraded to an annual plan in 2020?
 
 ```sql
@@ -299,7 +402,6 @@ AND start_date BETWEEN '2020-01-01' AND '2020-12-31';
 |---|
 | 195 |
 
----
 
 #### 9. How many days on average does it take for a customer to upgrade to an annual plan?
 
@@ -328,7 +430,7 @@ ON join_dates.customer_id = annual_dates.customer_id;
 |---|
 | 104 |
 
----
+Customers typically upgrade to an annual plan after ~3–4 months. This is a window for targeted retention or upsell campaigns to accelerate long-term subscriptions.
 
 #### 10. Breakdown of upgrade time into 30 day periods
 
@@ -374,7 +476,7 @@ ORDER BY period;
 | 121-180 days | 42 |
 | 180+ days | 10 |
 
----
+The breakdown shows that 49 customers upgrade within the first month, while 136 customers (31–180 days) upgrade over the next 1–6 months. Only 10 customers wait more than 6 months. This indicates that most upgrades occur within the first six months.
 
 #### 11. How many customers downgraded from pro monthly to basic monthly in 2020?
 
@@ -404,16 +506,15 @@ AND start_date BETWEEN '2020-01-01' AND '2020-12-31';
 |---|
 | 0 |
 
+---
 ### C. Challenge Payment Question
-The Foodie-Fi team wants you to create a new payments table for the year 2020 that includes amounts paid by each customer in the subscriptions table with the following requirements:
 
-- monthly payments always occur on the same day of month as the original start_date of any monthly paid plan
-- upgrades from basic to monthly or pro plans are reduced by the current paid amount in that month and start immediately
-- upgrades from pro monthly to pro annual are paid at the end of the current billing period and also starts at the end of the month period
-- once a customer churns they will no longer make payments
+> The Foodie-Fi team wants you to create a new payments table for the year 2020 that includes amounts paid by each customer in the subscriptions table with the following requirements:
 
-
-### C. Challenge Payment Question
+> - monthly payments always occur on the same day of month as the original start_date of any monthly paid plan
+> - upgrades from basic to monthly or pro plans are reduced by the current paid amount in that month and start immediately
+> - upgrades from pro monthly to pro annual are paid at the end of the current billing period and also starts at the end of the month period
+> - once a customer churns they will no longer make payments
 
 ```sql
 WITH plan_events AS (
@@ -508,10 +609,11 @@ ORDER BY customer_id, payment_date;
 | 19 | 2 | pro monthly | 2020-07-29 | 19.90 | 2 |
 | 19 | 3 | pro annual | 2020-08-29 | 199.00 | 3 |
 
+---
 
 ### D. Outside The Box Questions
-The following are open ended questions which might be asked during a technical interview for this case study - there are no right or wrong answers, but answers that make sense from both a technical and a business perspective make an amazing impression!
 
+The following are open ended questions which might be asked during a technical interview for this case study - there are no right or wrong answers, but answers that make sense from both a technical and a business perspective make an amazing impression!
 
 #### 1. How would you calculate the rate of growth for Foodie-Fi?
 
@@ -542,21 +644,16 @@ FROM monthly_customers;
 Growth rate =  
 (current period customers − previous period customers) ÷ previous period customers.
 
----
-
 #### 2. What key metrics would you recommend Foodie-Fi management track over time?
 
-Key metrics include:
-
-- **Monthly Active Subscribers** – total paying customers each month  
-- **Trial Conversion Rate** – percentage of trial users who convert to a paid plan  
-- **Churn Rate** – percentage of customers cancelling subscriptions  
-- **Customer Lifetime Value (CLV)** – expected revenue generated per customer  
-- **Average Revenue per User (ARPU)** – average monthly revenue per customer  
-- **Upgrade Rate** – percentage of users moving to higher-tier plans  
-- **Retention Rate** – proportion of customers remaining subscribed over time
-
----
+I would recommend track these metrics over time:
+- Monthly Active Subscribers: total paying customers each month  
+- Trial Conversion Rate: percentage of trial users who convert to a paid plan  
+- Churn Rate: percentage of customers cancelling subscriptions  
+- Customer Lifetime Value (CLV): expected revenue generated per customer  
+- Average Revenue per User (ARPU): average monthly revenue per customer  
+- Upgrade Rate: percentage of users moving to higher-tier plans  
+- Retention Rate:proportion of customers remaining subscribed over time
 
 #### 3. What customer journeys should be analysed to improve retention?
 
@@ -577,11 +674,9 @@ I think that the important customer journeys to analyze are:
 - **High-tenure customers who eventually churn**  
   Detecting warning signals before long-term users leave.
 
----
-
 #### 4. What questions would you include in an exit survey?
 
-Possible exit survey questions:
+I would include these questions in the exit survey:
 
 1. What is the main reason you decided to cancel your subscription?  
 2. Did the service provide the value you expected?  
@@ -590,25 +685,16 @@ Possible exit survey questions:
 5. How satisfied were you with the overall experience?  
 6. What improvements would make you consider returning?  
 
----
 
 #### 5. What business levers could reduce churn and how would you validate them?
 
 Possible levers:
 
-- **Improve onboarding experience**  
-  Help trial users quickly understand the product value.
-
-- **Targeted retention offers**  
-  Discounts or incentives for customers likely to churn.
-
-- **Feature improvements based on user behavior**  
-  Prioritize features used by high-retention customers.
-
-- **Flexible pricing options**  
-  Offer alternative plans or bundled pricing.
-
-- **Personalized recommendations or engagement content**
+- Improve onboarding experience to help trial users quickly understand the product value.
+- Targeted retention offers for customers likely to churn.
+- Prioritize features used by high-retention customers.
+- Offer alternative plans or bundled pricing.
+- Personalized recommendations or engagement content
 
 Validation methods:
 
