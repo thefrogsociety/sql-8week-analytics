@@ -195,101 +195,164 @@ ORDER BY month;
 | 2020-01-01 | 168 |
 | 2020-02-01 | 181 |
 | 2020-03-01 | 192 |
-| 2020-04-01 | 175 |
+| 2020-04-01 | 70  |
 
 #### 4. What is the closing balance for each customer at the end of the month?
 
 ```sql
 WITH running_balance AS (
-SELECT
-customer_id,
-txn_date,
-SUM(
-CASE
-WHEN txn_type = 'deposit' THEN txn_amount
-WHEN txn_type IN ('purchase','withdrawal') THEN -txn_amount
-END
-) OVER (
-PARTITION BY customer_id
-ORDER BY txn_date
-ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-) AS balance
-FROM customer_transactions
+  SELECT
+    customer_id,
+    txn_date,
+    SUM(
+      CASE
+        WHEN txn_type = 'deposit' THEN txn_amount
+        WHEN txn_type IN ('purchase','withdrawal') THEN -txn_amount
+      END
+    ) OVER (
+      PARTITION BY customer_id
+      ORDER BY txn_date
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS balance
+  FROM customer_transactions
 ),
 
 month_end AS (
-SELECT
-customer_id,
-DATE_TRUNC('month', txn_date) AS month,
-MAX(balance) AS closing_balance
-FROM running_balance
-GROUP BY customer_id, month
+  SELECT
+    customer_id,
+    DATE_TRUNC('month', txn_date) AS month,
+    MAX(balance) AS closing_balance
+  FROM running_balance
+  GROUP BY customer_id, DATE_TRUNC('month', txn_date)
+),
+
+months AS (
+  SELECT generate_series(
+    (SELECT MIN(month) FROM month_end),
+    (SELECT MAX(month) FROM month_end),
+    INTERVAL '1 month'
+  ) AS month
+),
+
+customers AS (
+  SELECT DISTINCT customer_id
+  FROM customer_transactions
+),
+
+customer_months AS (
+  SELECT
+    c.customer_id,
+    m.month
+  FROM customers c
+  CROSS JOIN months m
+),
+
+base AS (
+  SELECT
+    cm.customer_id,
+    cm.month,
+    me.closing_balance
+  FROM customer_months cm
+  LEFT JOIN month_end me
+    ON cm.customer_id = me.customer_id
+    AND cm.month = me.month
+),
+
+filled AS (
+  SELECT
+    customer_id,
+    month,
+    closing_balance,
+    -- create groups that reset whenever we see a non-null balance
+    COUNT(closing_balance) OVER (
+      PARTITION BY customer_id
+      ORDER BY month
+    ) AS grp
+  FROM base
 )
 
-SELECT *
-FROM month_end
+SELECT
+  customer_id,
+  month,
+  MAX(closing_balance) OVER (
+    PARTITION BY customer_id, grp
+  ) AS closing_balance
+FROM filled
 ORDER BY customer_id, month;
 ```
 
 ##### Answer
-| customer_id | month | closing_balance |
-|------------|------|----------------|
-| 1 | 2020-01-01 | 312 |
-| 1 | 2020-02-01 | 428 |
-| 1 | 2020-03-01 | 590 |
-| 2 | 2020-01-01 | 549 |
-| 2 | 2020-02-01 | 732 |
-| ... | ... | ... |
+| customer_id |    month   | closing_balance|
+|-------------|------------|----------------|
+|           1 | 2020-01-01 |             312|
+|           1 | 2020-02-01 |             312|
+|           1 | 2020-03-01 |              24|
+|           1 | 2020-04-01 |              24|
+|           2 | 2020-01-01 |             549|
+|...|...|...|
+
+I observe multiple instances where the closing balance remains unchanged across consecutive months. This is primarily due to periods of customer inactivity, where no transactions are recorded. I retain these inactive months with unchanged balances to preserve temporal consistency and ensure the dataset remains suitable for time-based analysis and month-level referencing.
+
+However, unchanged balances should not be interpreted as definitive evidence of inactivity. There may be cases where transactions occur but net to zero, resulting in no change in the closing balance.
 
 #### 5. What is the percentage of customers who increase their closing balance by more than 5%?
 
 ```sql
-WITH monthly_balance AS (
-SELECT
-customer_id,
-DATE_TRUNC('month', txn_date) AS month,
-SUM(
-CASE
-WHEN txn_type = 'deposit' THEN txn_amount
-WHEN txn_type IN ('purchase','withdrawal') THEN -txn_amount
-END
-) OVER (
-PARTITION BY customer_id
-ORDER BY txn_date
-ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-) AS balance
-FROM customer_transactions
+WITH monthly_net AS (
+  SELECT
+    customer_id,
+    DATE_TRUNC('month', txn_date) AS month,
+    SUM(
+      CASE
+        WHEN txn_type = 'deposit' THEN txn_amount
+        ELSE -txn_amount
+      END
+    ) AS net_txn
+  FROM customer_transactions
+  GROUP BY customer_id, DATE_TRUNC('month', txn_date)
 ),
 
-balance_change AS (
-SELECT
-customer_id,
-month,
-balance,
-LAG(balance) OVER (PARTITION BY customer_id ORDER BY month) AS prev_balance
-FROM monthly_balance
+monthly_balance AS (
+  SELECT
+    customer_id,
+    month,
+    SUM(net_txn) OVER (
+      PARTITION BY customer_id
+      ORDER BY month
+    ) AS balance
+  FROM monthly_net
 ),
 
-growth_customers AS (
-SELECT DISTINCT customer_id
-FROM balance_change
-WHERE prev_balance IS NOT NULL
-AND balance > prev_balance * 1.05
+growth AS (
+  SELECT
+    customer_id
+  FROM (
+    SELECT
+      customer_id,
+      month,
+      balance,
+      LAG(balance) OVER (
+        PARTITION BY customer_id ORDER BY month
+      ) AS prev_balance
+    FROM monthly_balance
+  ) t
+  WHERE prev_balance IS NOT NULL
+    AND balance > prev_balance * 1.05
 )
 
 SELECT
 ROUND(
-100.0 * COUNT(DISTINCT customer_id) /
-(SELECT COUNT(DISTINCT customer_id) FROM customer_transactions),
+  100.0 * COUNT(DISTINCT customer_id) /
+  (SELECT COUNT(DISTINCT customer_id) FROM customer_transactions),
 2
 ) AS pct_customers_growth
-FROM growth_customers;
+FROM growth;
 ```
 
 ##### Answer
 | pct_customers_growth |
 |----------------------|
-| 41.2 |
+| 71.0 |
 
 ### C. Data Allocation Challenge
 
@@ -314,11 +377,12 @@ ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
 FROM customer_transactions
 ORDER BY customer_id, txn_date;
 ```
-
-##### Answer
-A running balance is calculated by adding deposits and subtracting purchases and withdrawals cumulatively for each customer ordered by transaction date.
-
----
+| customer_id |  txn_date  |  txn_type  | txn_amount | running_balance|
+|-------------|------------|------------|------------|----------------|
+|           1 | 2020-01-02 | deposit    |        312 |             312|
+|           1 | 2020-03-05 | purchase   |        612 |            -300|
+|           1 | 2020-03-17 | deposit    |        324 |              24|
+|          ...|...|...|...|           
 
 #### 2. Customer balance at the end of each month
 
@@ -349,11 +413,6 @@ GROUP BY customer_id, month
 ORDER BY customer_id, month;
 ```
 
-##### Answer
-The closing balance is the maximum running balance recorded for each customer within each month.
-
----
-
 #### 3. Minimum, average and maximum values of the running balance for each customer
 
 ```sql
@@ -383,181 +442,121 @@ FROM running_balance
 GROUP BY customer_id
 ORDER BY customer_id;
 ```
-
-##### Answer
-This query returns the minimum, average and maximum running balance observed for each customer across all transactions.
-
----
+| customer_id | min_balance | avg_balance | max_balance|
+|-------------|-------------|-------------|------------|
+|           1 |        -640 |     -151.00 |         312|
+|           2 |         549 |      579.50 |         610|
+|           3 |       -1222 |     -732.40 |         144|
+|...|...|...|...|
 
 #### 4. Using all available data - how much data would be required for each option on a monthly basis?
 
-```sql
-WITH running_balance AS (
-SELECT
-customer_id,
-txn_date,
-SUM(
-CASE
-WHEN txn_type = 'deposit' THEN txn_amount
-WHEN txn_type IN ('purchase','withdrawal') THEN -txn_amount
-END
-) OVER (
-PARTITION BY customer_id
-ORDER BY txn_date
-ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-) AS balance
-FROM customer_transactions
-),
+For Option 1 (transaction-level storage), every single transaction is stored as its own row. This means the monthly data volume depends directly on how active customers are. If a customer performs multiple transactions per month, each one contributes to storage. In practice, this quickly scales up, since total records ≈ number of customers × average transactions per customer per month. This makes it the most data-intensive option, but also the most flexible, since no information is lost.
 
-month_end_balance AS (
-SELECT
-customer_id,
-DATE_TRUNC('month', txn_date) AS month,
-MAX(balance) AS closing_balance
-FROM running_balance
-GROUP BY customer_id, month
-),
+For Option 2 (daily balance storage), I aggregate all transactions into a single closing balance per customer per day. Here, the number of records is driven by time rather than activity: each customer contributes up to ~30 records per month (one per day). So total records ≈ number of customers × number of active days. This reduces data volume compared to raw transactions - especially for highly active users - while still preserving short-term trends and behavioral patterns.
 
-avg_30_balance AS (
-SELECT
-customer_id,
-DATE_TRUNC('month', txn_date) AS month,
-ROUND(AVG(balance),2) AS avg_balance
-FROM running_balance
-GROUP BY customer_id, month
-),
+For Option 3 (monthly balance storage), the aggregation is pushed even further. Each customer contributes exactly one record per month, regardless of how many transactions occurred. So total records ≈ number of customers × number of months. This is the most storage-efficient approach, but it abstracts away all intra-month variation, meaning I can no longer analyze volatility, transaction timing, or short-term behavioral changes.
 
-max_balance AS (
-SELECT
-DATE_TRUNC('month', txn_date) AS month,
-MAX(balance) AS max_balance
-FROM running_balance
-GROUP BY month
-)
-
-SELECT
-m.month,
-SUM(m.closing_balance) AS option1_end_month,
-SUM(a.avg_balance) AS option2_avg_30_days,
-SUM(mx.max_balance) AS option3_realtime
-FROM month_end_balance m
-JOIN avg_30_balance a
-ON m.customer_id = a.customer_id
-AND m.month = a.month
-JOIN max_balance mx
-ON m.month = mx.month
-GROUP BY m.month
-ORDER BY m.month;
-```
-
-##### Answer
-
-| month | option1_end_month | option2_avg_30_days | option3_realtime |
-|------|------------------|--------------------|------------------|
-| 2020-01-01 | … | … | … |
-| 2020-02-01 | … | … | … |
-| 2020-03-01 | … | … | … |
-| 2020-04-01 | … | … | … |
-
-Option 1 provisions data based on the total of customer closing balances at the end of each month.  
-Option 2 provisions data based on the average customer balance within the month.  
-Option 3 requires provisioning based on the maximum real-time balance observed in the system during the month.
 
 ### D. Extra Challenge
 
-#### 1. Monthly data requirement with daily interest (6% annual, no compounding)
+I approach this by first converting the annual interest rate into a daily rate, assuming 365 days in a year. Since the requirement specifies non-compounding interest, I calculate daily interest based solely on the daily closing balance without reinvesting the earned interest.
+
+To support this, I construct a daily balance table by generating a continuous date series and forward-filling each customer’s balance for days without transactions. This ensures that interest is calculated consistently for every day, including inactive periods.
+
+I then compute daily interest as a function of the daily balance and aggregate the results at the monthly level to estimate the total data growth required under this model.
+
+#### 1. Daily balance
 
 ```sql
 WITH running_balance AS (
-SELECT
-customer_id,
-txn_date,
-SUM(
-CASE
-WHEN txn_type = 'deposit' THEN txn_amount
-WHEN txn_type IN ('purchase','withdrawal') THEN -txn_amount
-END
-) OVER (
-PARTITION BY customer_id
-ORDER BY txn_date
-ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-) AS balance
-FROM customer_transactions
+  SELECT
+    customer_id,
+    txn_date,
+    SUM(
+      CASE
+        WHEN txn_type = 'deposit' THEN txn_amount
+        ELSE -txn_amount
+      END
+    ) OVER (
+      PARTITION BY customer_id
+      ORDER BY txn_date
+    ) AS balance
+  FROM customer_transactions
 ),
 
-daily_interest AS (
-SELECT
-customer_id,
-txn_date,
-balance,
-balance * (0.06/365) AS daily_interest
-FROM running_balance
-)
+dates AS (
+  SELECT generate_series(
+    (SELECT MIN(txn_date) FROM customer_transactions),
+    (SELECT MAX(txn_date) FROM customer_transactions),
+    INTERVAL '1 day'
+  ) AS date
+),
 
-SELECT
-DATE_TRUNC('month', txn_date) AS month,
-ROUND(SUM(balance + daily_interest),2) AS required_data
-FROM daily_interest
-GROUP BY month
-ORDER BY month;
+customers AS (
+  SELECT DISTINCT customer_id FROM customer_transactions
+),
+
+customer_days AS (
+  SELECT c.customer_id, d.date
+  FROM customers c
+  CROSS JOIN dates d
+),
+
+daily_balance AS (
+  SELECT
+    cd.customer_id,
+    cd.date,
+    rb.balance
+  FROM customer_days cd
+  LEFT JOIN running_balance rb
+    ON cd.customer_id = rb.customer_id
+    AND cd.date = rb.txn_date
+),
+
+filled AS (
+  SELECT
+    customer_id,
+    date,
+    balance,
+    COUNT(balance) OVER (
+      PARTITION BY customer_id ORDER BY date
+    ) AS grp
+  FROM daily_balance
+),
+
+final_balance AS (
+  SELECT
+    customer_id,
+    date,
+    MAX(balance) OVER (
+      PARTITION BY customer_id, grp
+    ) AS balance
+  FROM filled
+)
 ```
 
-##### Answer
-| month | required_data |
-|------|--------------|
-| 2020-01-01 | … |
-| 2020-02-01 | … |
-| 2020-03-01 | … |
-| 2020-04-01 | … |
-
----
-
-#### 2. Monthly data requirement with daily compounding interest
-
+#### 2. Calculate Daily Interest
 ```sql
-WITH running_balance AS (
-SELECT
-customer_id,
-txn_date,
-SUM(
-CASE
-WHEN txn_type = 'deposit' THEN txn_amount
-WHEN txn_type IN ('purchase','withdrawal') THEN -txn_amount
-END
-) OVER (
-PARTITION BY customer_id
-ORDER BY txn_date
-ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-) AS balance
-FROM customer_transactions
-),
-
-compound_interest AS (
-SELECT
-customer_id,
-txn_date,
-balance * POWER(1 + 0.06/365,1) AS compounded_balance
-FROM running_balance
+, interest_calc AS (
+  SELECT
+    customer_id,
+    date,
+    balance,
+    balance * (0.06 / 365) AS daily_interest
+  FROM final_balance
 )
-
+```
+#### 3. Aggregate monthly
+```sql
 SELECT
-DATE_TRUNC('month', txn_date) AS month,
-ROUND(SUM(compounded_balance),2) AS required_data
-FROM compound_interest
+  DATE_TRUNC('month', date) AS month,
+  ROUND(SUM(daily_interest), 2) AS total_interest
+FROM interest_calc
 GROUP BY month
 ORDER BY month;
 ```
-
-##### Answer
-| month | required_data |
-|------|--------------|
-| 2020-01-01 | … |
-| 2020-02-01 | … |
-| 2020-03-01 | … |
-| 2020-04-01 | … |
-
 ---
-
 ### Extension Request
 
 #### Investor & Customer Security Insights (Customer Node Analysis)
@@ -571,9 +570,8 @@ ORDER BY month;
 
 These points frame Data Bank as a **distributed and resilient banking infrastructure**, similar to how large cloud providers distribute workloads.
 
----
 
-### Data Provisioning Options (Management Slide Content)
+#### Data Provisioning Options (Management Slide Content)
 
 **Objective:** Estimate infrastructure capacity needed for storing customer data balances.
 
