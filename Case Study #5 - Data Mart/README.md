@@ -17,8 +17,8 @@ What can we do about future introduction of similar sustainability updates to th
 
 ## Entity Relationship Diagram
 
-
-### 1. Data Cleansing Steps
+## Questions and Answers
+### Data Cleansing Steps
 
 > In a single query, perform the following operations and generate a new table in the data_mart schema named clean_weekly_sales:
 
@@ -81,10 +81,9 @@ ROUND(sales::numeric / transactions, 2) AS avg_transaction
 
 FROM data_mart.weekly_sales;
 ```
-
 ---
 
-### 2. Data Exploration
+### Data Exploration
 
 #### 1. What day of the week is used for each `week_date` value?
 
@@ -297,13 +296,11 @@ ORDER BY total_sales DESC;
 | Middle Aged  | Couples     |  1854160330|
 | Young Adults | Families    |  1770889293|
 
-Apart from the unknown age band from the unknown demographic, which might consist many different groups within the category and thus is not useful for interpretation and analysis, the `age_band` and `demographic` that 
+Apart from the unknown age band from the unknown demographic, which might consist many different groups within the category and thus is not useful for interpretation and analysis, the `age_band` and `demographic` that contribute the most to Retail sales are `Retirees` and `Families`
 
-#### 9. Can avg_transaction be used to calculate average transaction size?
+#### 9. Can `avg_transaction` be used to calculate average `transaction` size?
 
-No.
-
-Because **avg_transaction is calculated per row**, averaging those values would produce a biased result.
+No, because **avg_transaction is calculated per row**, averaging those values would produce a biased result.
 
 Correct calculation:
 
@@ -317,9 +314,18 @@ GROUP BY calendar_year, platform
 ORDER BY calendar_year, platform;
 ```
 
+| calendar_year | platform | avg_transaction_size|
+|---------------|----------|---------------------|
+|          2018 | Retail   |                36.00|
+|          2018 | Shopify  |               192.00|
+|          2019 | Retail   |                36.00|
+|          2019 | Shopify  |               183.00|
+|          2020 | Retail   |                36.00|
+|          2020 | Shopify  |               179.00|
+
 ---
 
-### 3. Before & After Analysis
+### Before & After Analysis
 
 Baseline date: **2020-06-15**
 
@@ -327,75 +333,157 @@ Baseline date: **2020-06-15**
 
 ```sql
 WITH baseline AS (
-SELECT *
-FROM data_mart.clean_weekly_sales
-WHERE calendar_year = 2020
+    SELECT *
+    FROM data_mart.clean_weekly_sales
+    WHERE calendar_year = 2020
 ),
 
 periods AS (
-SELECT
-CASE
-WHEN week_date BETWEEN DATE '2020-05-18' AND DATE '2020-06-14' THEN 'Before'
-WHEN week_date BETWEEN DATE '2020-06-15' AND DATE '2020-07-12' THEN 'After'
-END AS period,
-sales
-FROM baseline
+    SELECT
+        CASE
+            WHEN week_date BETWEEN DATE '2020-05-18' AND DATE '2020-06-14' THEN 'Before'
+            WHEN week_date BETWEEN DATE '2020-06-15' AND DATE '2020-07-12' THEN 'After'
+        END AS period,
+        sales
+    FROM baseline
+),
+
+aggregated AS (
+    SELECT
+        period,
+        SUM(sales) AS total_sales
+    FROM periods
+    GROUP BY period
+),
+
+pivoted AS (
+    SELECT
+        MAX(CASE WHEN period = 'Before' THEN total_sales END) AS before_sales,
+        MAX(CASE WHEN period = 'After' THEN total_sales END) AS after_sales
+    FROM aggregated
 )
 
 SELECT
-period,
-SUM(sales) AS total_sales
-FROM periods
-GROUP BY period;
+    before_sales,
+    after_sales,
+    (after_sales - before_sales) AS absolute_change,
+    ROUND(
+        (after_sales - before_sales) * 100.0 / before_sales,
+        2
+    ) AS percentage_change
+FROM pivoted;
 ```
 
-Growth rate:
+| before_sales | after_sales | absolute_change | percentage_change|
+|--------------|-------------|-----------------|------------------|
+|   2345878357 |  2318994169 |       -26884188 |             -1.15|
 
-```
-growth = (after - before) / before * 100
-```
-
----
 
 #### 2. Sales 12 weeks before and after
 
 ```sql
-WITH periods AS (
-SELECT
-CASE
-WHEN week_date BETWEEN DATE '2020-03-23' AND DATE '2020-06-14' THEN 'Before'
-WHEN week_date BETWEEN DATE '2020-06-15' AND DATE '2020-09-06' THEN 'After'
-END AS period,
-sales
-FROM data_mart.clean_weekly_sales
-WHERE calendar_year = 2020
+WITH baseline AS (
+    SELECT *
+    FROM data_mart.clean_weekly_sales
+    WHERE calendar_year = 2020
+),
+
+periods AS (
+    SELECT
+        CASE
+            WHEN week_date BETWEEN DATE '2020-03-23' AND DATE '2020-06-14' THEN 'Before'
+            WHEN week_date BETWEEN DATE '2020-06-15' AND DATE '2020-09-06' THEN 'After'
+        END AS period,
+        sales
+    FROM baseline
+),
+
+aggregated AS (
+    SELECT
+        period,
+        SUM(sales) AS total_sales
+    FROM periods
+    GROUP BY period
+),
+
+pivoted AS (
+    SELECT
+        MAX(CASE WHEN period = 'Before' THEN total_sales END) AS before_sales,
+        MAX(CASE WHEN period = 'After' THEN total_sales END) AS after_sales
+    FROM aggregated
 )
 
 SELECT
-period,
-SUM(sales) AS total_sales
-FROM periods
-GROUP BY period;
+    before_sales,
+    after_sales,
+    (after_sales - before_sales) AS absolute_change,
+    ROUND(
+        (after_sales - before_sales) * 100.0 / before_sales,
+        2
+    ) AS percentage_change
+FROM pivoted;
 ```
+ before_sales | after_sales | absolute_change | percentage_change|
+--------------+-------------+-----------------+------------------|
+   7126273147 |  6973947753 |      -152325394 |             -2.14|
 
----
 
-#### 3. Comparison with 2018 and 2019
-
+#### 3. How do the sale metrics for these 2 periods before and after compare with the previous years in 2018 and 2019?
 ```sql
+WITH baseline AS (
+    SELECT *
+    FROM data_mart.clean_weekly_sales
+    WHERE calendar_year IN (2018, 2019, 2020)
+),
+
+periods AS (
+    SELECT
+        calendar_year,
+        CASE
+            WHEN week_number BETWEEN 13 AND 24 THEN 'Before'
+            WHEN week_number BETWEEN 25 AND 36 THEN 'After'
+        END AS period,
+        sales
+    FROM baseline
+),
+
+aggregated AS (
+    SELECT
+        calendar_year,
+        period,
+        SUM(sales) AS total_sales
+    FROM periods
+    WHERE period IS NOT NULL
+    GROUP BY calendar_year, period
+),
+
+pivoted AS (
+    SELECT
+        calendar_year,
+        MAX(CASE WHEN period = 'Before' THEN total_sales END) AS before_sales,
+        MAX(CASE WHEN period = 'After' THEN total_sales END) AS after_sales
+    FROM aggregated
+    GROUP BY calendar_year
+)
+
 SELECT
-calendar_year,
-CASE
-WHEN week_date BETWEEN DATE '2020-03-23' AND DATE '2020-06-14' THEN 'Before'
-WHEN week_date BETWEEN DATE '2020-06-15' AND DATE '2020-09-06' THEN 'After'
-END AS period,
-SUM(sales) AS total_sales
-FROM data_mart.clean_weekly_sales
-WHERE calendar_year IN (2018,2019,2020)
-GROUP BY calendar_year, period
+    calendar_year,
+    before_sales,
+    after_sales,
+    (after_sales - before_sales) AS absolute_change,
+    ROUND(
+        (after_sales - before_sales) * 100.0 / before_sales,
+        2
+    ) AS percentage_change
+FROM pivoted
 ORDER BY calendar_year;
 ```
 
+| calendar_year | before_sales | after_sales | absolute_change | percentage_change
+|---------------| --------------+-------------+-----------------+-------------------
+|          2018 |   6396562317 |  6500818510 |       104256193 |              1.63
+|          2019 |   6883386397 |  6862646103 |       -20740294 |             -0.30
+|          2020 |   7126273147 |  6973947753 |      -152325394 |             -2.14
 ---
 
 ### 4. Bonus Question
