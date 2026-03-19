@@ -97,7 +97,9 @@ FROM data_mart.clean_weekly_sales;
 ##### Answer
 All records use **Monday** as the week_date reference.
 
----
+| day_of_week|
+|-------------|
+| Monday|
 
 #### 2. What range of week numbers are missing from the dataset?
 
@@ -110,9 +112,38 @@ ORDER BY week_number;
 ```
 
 ##### Answer
-Week numbers **1–52 are all present** in the dataset.
+| week_number|
+|------------|
+|           1|
+|           2|
+|           3|
+|           4|
+|           5|
+|           6|
+|           7|
+|           8|
+|           9|
+|          10|
+|          11|
+|          12|
+|          37|
+|          38|
+|          39|
+|          40|
+|          41|
+|          42|
+|          43|
+|          44|
+|          45|
+|          46|
+|          47|
+|          48|
+|          49|
+|          50|
+|          51|
+|          52|
 
----
+The weeks missing from the dataset range from week 13 to week 36.
 
 #### 3. How many total transactions were there for each year?
 
@@ -125,7 +156,6 @@ GROUP BY calendar_year
 ORDER BY calendar_year;
 ```
 
----
 
 #### 4. Total sales for each region for each month
 
