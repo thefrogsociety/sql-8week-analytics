@@ -86,7 +86,7 @@ FROM data_mart.weekly_sales;
 
 ### 2. Data Exploration
 
-#### 1. What day of the week is used for each week_date value?
+#### 1. What day of the week is used for each `week_date` value?
 
 ```sql
 SELECT DISTINCT
@@ -95,7 +95,6 @@ FROM data_mart.clean_weekly_sales;
 ```
 
 ##### Answer
-All records use **Monday** as the week_date reference.
 
 | day_of_week|
 |-------------|
@@ -145,7 +144,7 @@ ORDER BY week_number;
 
 The weeks missing from the dataset range from week 13 to week 36.
 
-#### 3. How many total transactions were there for each year?
+#### 3. How many total `transactions` were there for each year?
 
 ```sql
 SELECT
@@ -155,9 +154,13 @@ FROM data_mart.clean_weekly_sales
 GROUP BY calendar_year
 ORDER BY calendar_year;
 ```
+| calendar_year | total_transactions|
+|---------------|-------------------|
+|          2018 |          346406460|
+|          2019 |          365639285|
+|          2020 |          375813651|
 
-
-#### 4. Total sales for each region for each month
+#### 4. Total `sales` for each `region` for each month
 
 ```sql
 SELECT
@@ -169,9 +172,19 @@ GROUP BY region, month_number
 ORDER BY region, month_number;
 ```
 
----
+|    region     | month_number | total_sales|
+|---------------|--------------|------------|
+| AFRICA        |            3 |   567767480|
+| AFRICA        |            4 |  1911783504|
+| AFRICA        |            5 |  1647244738|
+| AFRICA        |            6 |  1767559760|
+| AFRICA        |            7 |  1960219710|
+| AFRICA        |            8 |  1809596890|
+| AFRICA        |            9 |   276320987|
+| ASIA          |            3 |   529770793|
+|...|...|...|
 
-#### 5. Total count of transactions for each platform
+#### 5. Total count of `transactions` for each `platform`
 
 ```sql
 SELECT
@@ -180,10 +193,25 @@ SUM(transactions) AS total_transactions
 FROM data_mart.clean_weekly_sales
 GROUP BY platform;
 ```
+| month_number | platform | pct_sales|
+|--------------|----------|----------|
+|            3 | Retail   |     97.54|
+|            3 | Shopify  |      2.46|
+|            4 | Retail   |     97.59|
+|            4 | Shopify  |      2.41|
+|            5 | Retail   |     97.30|
+|            5 | Shopify  |      2.70|
+|            6 | Shopify  |      2.73|
+|            6 | Retail   |     97.27|
+|            7 | Shopify  |      2.71|
+|            7 | Retail   |     97.29|
+|            8 | Retail   |     97.08|
+|            8 | Shopify  |      2.92|
+|            9 | Retail   |     97.38|
+|            9 | Shopify  |      2.62|
 
----
 
-#### 6. Percentage of sales for Retail vs Shopify for each month
+#### 6. Percentage of `sales` for Retail vs Shopify for each month
 
 ```sql
 SELECT
@@ -199,9 +227,25 @@ GROUP BY month_number, platform
 ORDER BY month_number;
 ```
 
----
+| month_number | platform | pct_sales|
+|--------------|----------|----------|
+|            3 | Retail   |     97.54|
+|            3 | Shopify  |      2.46|
+|            4 | Retail   |     97.59|
+|            4 | Shopify  |      2.41|
+|            5 | Retail   |     97.30|
+|            5 | Shopify  |      2.70|
+|            6 | Shopify  |      2.73|
+|            6 | Retail   |     97.27|
+|            7 | Shopify  |      2.71|
+|            7 | Retail   |     97.29|
+|            8 | Retail   |     97.08|
+|            8 | Shopify  |      2.92|
+|            9 | Retail   |     97.38|
+|            9 | Shopify  |      2.62|
+            
 
-#### 7. Percentage of sales by demographic for each year
+#### 7. Percentage of `sales` by `demographic` for each year
 
 ```sql
 SELECT
@@ -217,9 +261,20 @@ GROUP BY calendar_year, demographic
 ORDER BY calendar_year;
 ```
 
----
+| calendar_year | demographic | pct_sales|
+|---------------|-------------|----------|
+|          2018 | Couples     |     26.38|
+|          2018 | Families    |     31.99|
+|          2018 | unknown     |     41.63|
+|          2019 | Couples     |     27.28|
+|          2019 | unknown     |     40.25|
+|          2019 | Families    |     32.47|
+|          2020 | Couples     |     28.72|
+|          2020 | Families    |     32.73|
+|          2020 | unknown     |     38.55|
 
-#### 8. Which age_band and demographic contribute the most to Retail sales?
+
+#### 8. Which `age_band` and `demographic` contribute the most to Retail sales?
 
 ```sql
 SELECT
@@ -232,7 +287,17 @@ GROUP BY age_band, demographic
 ORDER BY total_sales DESC;
 ```
 
----
+|   age_band   | demographic | total_sales|
+|--------------|-------------|------------|
+| unknown      | unknown     | 16067285533|
+| Retirees     | Families    |  6634686916|
+| Retirees     | Couples     |  6370580014|
+| Middle Aged  | Families    |  4354091554|
+| Young Adults | Couples     |  2602922797|
+| Middle Aged  | Couples     |  1854160330|
+| Young Adults | Families    |  1770889293|
+
+Apart from the unknown age band from the unknown demographic, which might consist many different groups within the category and thus is not useful for interpretation and analysis, the `age_band` and `demographic` that 
 
 #### 9. Can avg_transaction be used to calculate average transaction size?
 
