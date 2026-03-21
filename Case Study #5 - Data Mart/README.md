@@ -479,43 +479,67 @@ FROM pivoted
 ORDER BY calendar_year;
 ```
 
-| calendar_year | before_sales | after_sales | absolute_change | percentage_change
-|---------------| --------------+-------------+-----------------+-------------------
-|          2018 |   6396562317 |  6500818510 |       104256193 |              1.63
-|          2019 |   6883386397 |  6862646103 |       -20740294 |             -0.30
-|          2020 |   7126273147 |  6973947753 |      -152325394 |             -2.14
+| calendar_year | before_sales | after_sales | absolute_change | percentage_change|
+|---------------| -------------|-------------|-----------------|------------------|
+|          2018 |   6396562317 |  6500818510 |       104256193 |              1.63|
+|          2019 |   6883386397 |  6862646103 |       -20740294 |             -0.30|
+|          2020 |   7126273147 |  6973947753 |      -152325394 |             -2.14|
+
+Looking at 2018 and 2019, I see a fairly stable pattern between the two periods. Sales either grow slightly (+1.63% in 2018) or stay almost flat (−0.30% in 2019), which suggests that this time window doesn’t naturally produce a decline.
+
+In 2020, that pattern clearly breaks. Sales drop by −2.14%, which is both the largest change and a reversal in direction compared to 2018. Even relative to 2019, the decline is noticeably stronger.
+
+Because I’m comparing the same weeks across years, I can rule out seasonality as the main driver. This makes it more likely that the 2020 drop reflects an external shock rather than normal variation. I also notice a progression from growth (2018) to stagnation (2019) to contraction (2020), which suggests the shock in 2020 amplified an already weakening trend.
+
 ---
 
-### 4. Bonus Question
+### Bonus Question
 
-#### Which areas saw the biggest negative impact?
+#### Which areas of the business have the highest negative impact in sales metrics performance in 2020 for the 12 week before and after period?
 
 ```sql
-SELECT
-region,
-platform,
-age_band,
-demographic,
-customer_type,
-SUM(CASE
-WHEN week_date BETWEEN DATE '2020-06-15' AND DATE '2020-09-06'
-THEN sales END) -
-SUM(CASE
-WHEN week_date BETWEEN DATE '2020-03-23' AND DATE '2020-06-14'
-THEN sales END) AS sales_change
-FROM data_mart.clean_weekly_sales
-GROUP BY
-region, platform, age_band, demographic, customer_type
-ORDER BY sales_change;
+WITH sales_change AS (
+  SELECT
+    region,
+    platform,
+    age_band,
+    demographic,
+    customer_type,
+    SUM(CASE
+      WHEN week_date BETWEEN DATE '2020-06-15' AND DATE '2020-09-06'
+      THEN sales END) -
+    SUM(CASE
+      WHEN week_date BETWEEN DATE '2020-03-23' AND DATE '2020-06-14'
+      THEN sales END) AS sales_change
+  FROM data_mart.clean_weekly_sales
+  WHERE region != 'unknown'
+    AND platform != 'unknown'
+    AND age_band != 'unknown'
+    AND demographic != 'unknown'
+    AND customer_type != 'unknown'
+  GROUP BY
+    region, platform, age_band, demographic, customer_type
+)
+
+SELECT *
+FROM sales_change
+WHERE sales_change < 0
+ORDER BY sales_change ASC
+LIMIT 1;
 ```
 
----
+| region  | platform | age_band | demographic | customer_type | sales_change|
+|---------|----------|----------|-------------|---------------|-------------|
+| OCEANIA | Retail   | Retirees | Couples     | Existing      |    -1187100|
 
-### Recommendations
+#### Recommendations
 
-Key strategic observations:
+The largest decline is concentrated in the **OCEANIA – Retail – Retirees – Couples – Existing customers** segment, indicating that the impact is highly localized rather than systemic across the business.
 
-• **Retail sales dominate older demographics**, particularly retirees and families.  
-• **Shopify growth indicates strong digital channel potential** and should receive further investment.  
-• Packaging changes should be evaluated alongside **regional sales sensitivity**, since some markets may respond differently to sustainability initiatives.  
-• Monitoring **average transaction size trends** is critical because small shifts there scale massively across millions of transactions.
+I would recommend focusing on **targeted recovery efforts** for this segment. Since the decline is driven by existing customers, the priority should be retention—specifically re-engagement campaigns, personalized offers, and identifying potential friction points in their experience.
+
+From a channel perspective, the underperformance of the Retail platform suggests possible operational or experience-related issues. Investigating factors such as pricing, product availability, or in-store experience could help explain the drop and guide improvements.
+
+The fact that retirees and couples are most affected also points to a demographic-specific shift in behavior. This segment may be more sensitive to changes, so tailored messaging or incentives may be required to win them back.
+
+Overall, the key insight is that the decline is driven by a very specific customer segment. Addressing this group directly is likely to be more effective than applying broad, undifferentiated strategies across the entire customer base.
