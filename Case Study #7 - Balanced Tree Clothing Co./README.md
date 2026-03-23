@@ -24,7 +24,6 @@ FROM balanced_tree.sales;
 |---------------------|
 | 45216 |
 
-
 #### 2. What is the total generated revenue for all products before discounts?
 
 ```sql
@@ -51,9 +50,7 @@ FROM balanced_tree.sales;
 
 | total_discount_amount |
 |-----------------------|
-| 156229.14 |
-
-### Transaction Analysis
+|             149486.00 |
 
 ### Transaction Analysis
 
@@ -70,10 +67,6 @@ FROM balanced_tree.sales;
 | unique_transactions |
 |---------------------|
 | 2500 |
-
-There were **2,500 unique transactions** recorded in the dataset.
-
----
 
 #### 2. What is the average unique products purchased in each transaction?
 
@@ -97,9 +90,6 @@ FROM product_per_txn;
 |---------------------|
 | 6.04 |
 
-On average, each transaction contained **6.04 unique products**.
-
----
 
 #### 3. What are the 25th, 50th and 75th percentile values for the revenue per transaction?
 
@@ -119,17 +109,14 @@ PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY revenue) AS p75
 FROM txn_revenue;
 ```
 
-##### Answer
+|  p25   |  p50  | p75|
+|--------|-------|----|
+| 375.75 | 509.5 | 647|
 
-| p25 | p50 | p75 |
-|----|----|----|
-| 376 | 509 | 647 |
+• 25% of transactions generated **$376 or less**.  
+• The median transaction revenue was **$509.5**.
+• 75% of transactions generated **$647 or less**.
 
-• 25% of transactions generated **$376 or less**  
-• The median transaction revenue was **$509**  
-• 75% of transactions generated **$647 or less**
-
----
 
 #### 4. What is the average discount value per transaction?
 
@@ -151,7 +138,7 @@ FROM discount_per_txn;
 
 | avg_discount_per_txn |
 |----------------------|
-| 62.49 |
+| 59.79 |
 
 #### 5. What is the percentage split of all transactions for members vs non-members?
 
@@ -167,12 +154,11 @@ GROUP BY member;
 
 ##### Answer
 
-| member | transaction_count | percentage_split |
-|-------|------------------|------------------|
-| t | 1502 | 60.08 |
-| f | 998 | 39.92 |
+| member | transaction_count | percentage_split|
+|--------|-------------------|-----------------|
+| f      |               995 |            39.80|
+| t      |              1505 |            60.20|
 
----
 
 #### 6. What is the average revenue for member transactions and non-member transactions?
 
@@ -224,7 +210,6 @@ LIMIT 3;
 | Grey Fashion Jacket - Womens | 209304 |
 | White Tee Shirt - Mens | 152000 |
 
----
 
 #### 2. What is the total quantity, revenue and discount for each segment?
 
@@ -243,14 +228,12 @@ ORDER BY total_revenue DESC;
 
 ##### Answer
 
-| segment_name | total_quantity | total_revenue | total_discount |
-|---------------|---------------|---------------|---------------|
-| Shirts | 11265 | 406143 | 48923.64 |
-| Jackets | 11385 | 366983 | 44237.43 |
-| Socks | 11217 | 307977 | 37198.02 |
-| Jeans | 11349 | 208350 | 25870.05 |
-
----
+| segment_name | total_quantity | total_revenue | total_discount|
+|--------------|----------------|---------------|---------------|
+| Shirt        |          11265 |        406143 |          48082|
+| Jacket       |          11385 |        366983 |          42451|
+| Socks        |          11217 |        307977 |          35280|
+| Jeans        |          11349 |        208350 |          23673|
 
 #### 3. What is the top selling product for each segment?
 
@@ -283,14 +266,12 @@ WHERE rnk = 1;
 
 ##### Answer
 
-| segment_name | product_name | total_quantity |
-|---------------|---------------|---------------|
-| Shirts | Blue Polo Shirt - Mens | 3819 |
-| Jackets | Grey Fashion Jacket - Womens | 3876 |
-| Socks | Navy Solid Socks - Mens | 3792 |
-| Jeans | Black Straight Jeans - Womens | 3786 |
-
----
+|segment_name |         product_name          | total_quantity | rnk|
+|-------------|-------------------------------|----------------|----|
+| Jacket      | Grey Fashion Jacket - Womens  |           3876 |   1|
+| Jeans       | Navy Oversized Jeans - Womens |           3856 |   1|
+| Shirt       | Blue Polo Shirt - Mens        |           3819 |   1|
+| Socks       | Navy Solid Socks - Mens       |           3792 |   1|
 
 #### 4. What is the total quantity, revenue and discount for each category?
 
@@ -309,12 +290,11 @@ ORDER BY total_revenue DESC;
 
 ##### Answer
 
-| category_name | total_quantity | total_revenue | total_discount |
-|---------------|---------------|---------------|---------------|
-| Mens | 22650 | 714120 | 86615.43 |
-| Womens | 22566 | 575333 | 69613.71 |
+| category_name | total_quantity | total_revenue | total_discount|
+|---------------+----------------+---------------+---------------|
+| Mens          |          22482 |        714120 |          83362|
+| Womens        |          22734 |        575333 |          66124|
 
----
 
 #### 5. What is the top selling product for each category?
 
@@ -347,12 +327,11 @@ WHERE rnk = 1;
 
 ##### Answer
 
-| category_name | product_name | total_quantity |
-|---------------|---------------|---------------|
-| Mens | Blue Polo Shirt - Mens | 3819 |
-| Womens | Grey Fashion Jacket - Womens | 3876 |
+| category_name |         product_name         | total_quantity | rnk|
+|---------------|------------------------------|----------------+----|
+| Mens          | Blue Polo Shirt - Mens       |           3819 |   1|
+| Womens        | Grey Fashion Jacket - Womens |           3876 |   1|
 
----
 
 #### 6. What is the percentage split of revenue by product for each segment?
 
@@ -375,16 +354,20 @@ ORDER BY p.segment_name, revenue_pct DESC;
 
 ##### Answer
 
-Example output:
-
-| segment_name | product_name | revenue | revenue_pct |
-|---------------|---------------|--------|-------------|
-| Jackets | Grey Fashion Jacket - Womens | 209304 | 57.04 |
-| Jackets | Khaki Suit Jacket - Womens | 157679 | 42.96 |
-| Shirts | Blue Polo Shirt - Mens | 217683 | 53.60 |
-| Shirts | White Tee Shirt - Mens | 188460 | 46.40 |
-
----
+| segment_name |           product_name           | revenue | revenue_pct|
+|--------------|----------------------------------|---------|------------|
+| Jacket       | Grey Fashion Jacket - Womens     |  209304 |       57.03|
+| Jacket       | Khaki Suit Jacket - Womens       |   86296 |       23.51|
+| Jacket       | Indigo Rain Jacket - Womens      |   71383 |       19.45|
+| Jeans        | Black Straight Jeans - Womens    |  121152 |       58.15|
+| Jeans        | Navy Oversized Jeans - Womens    |   50128 |       24.06|
+| Jeans        | Cream Relaxed Jeans - Womens     |   37070 |       17.79|
+| Shirt        | Blue Polo Shirt - Mens           |  217683 |       53.60|
+| Shirt        | White Tee Shirt - Mens           |  152000 |       37.43|
+| Shirt        | Teal Button Up Shirt - Mens      |   36460 |        8.98|
+| Socks        | Navy Solid Socks - Mens          |  136512 |       44.33|
+| Socks        | Pink Fluro Polkadot Socks - Mens |  109330 |       35.50|
+| Socks        | White Striped Socks - Mens       |   62135 |       20.18|
 
 #### 7. What is the percentage split of revenue by segment for each category?
 
@@ -407,14 +390,12 @@ ORDER BY p.category_name, revenue_pct DESC;
 
 ##### Answer
 
-| category_name | segment_name | revenue | revenue_pct |
-|---------------|---------------|--------|-------------|
-| Mens | Shirts | 406143 | 56.88 |
-| Mens | Socks | 307977 | 43.12 |
-| Womens | Jackets | 366983 | 63.79 |
-| Womens | Jeans | 208350 | 36.21 |
-
----
+| category_name | segment_name | revenue | revenue_pct|
+|---------------|--------------|---------|------------|
+| Mens          | Shirt        |  406143 |       56.87|
+| Mens          | Socks        |  307977 |       43.13|
+| Womens        | Jacket       |  366983 |       63.79|
+| Womens        | Jeans        |  208350 |       36.21|
 
 #### 8. What is the percentage split of total revenue by category?
 
@@ -436,11 +417,10 @@ GROUP BY p.category_name;
 ##### Answer
 
 | category_name | revenue | revenue_pct |
-|---------------|--------|-------------|
-| Mens | 714120 | 55.38 |
-| Womens | 575333 | 44.62 |
+|---------------|---------|-------------|
+| Mens          | 714120  | 55.38       |
+| Womens        | 575333  | 44.62       |
 
----
 
 #### 9. What is the total transaction penetration for each product?
 
@@ -469,16 +449,20 @@ ORDER BY penetration_pct DESC;
 
 ##### Answer
 
-Example output:
-
-| product_name | txn_count | penetration_pct |
-|---------------|----------|----------------|
-| Blue Polo Shirt - Mens | 1788 | 71.52 |
-| Grey Fashion Jacket - Womens | 1763 | 70.52 |
-| Navy Solid Socks - Mens | 1758 | 70.32 |
-| Black Straight Jeans - Womens | 1746 | 69.84 |
-
----
+|           product_name           | txn_count | penetration_pct|
+|----------------------------------|-----------|----------------|
+| Navy Solid Socks - Mens          |      1281 |           51.00|
+| Grey Fashion Jacket - Womens     |      1275 |           51.00|
+| White Tee Shirt - Mens           |      1268 |           50.00|
+| Indigo Rain Jacket - Womens      |      1250 |           50.00|
+| Blue Polo Shirt - Mens           |      1268 |           50.00|
+| Navy Oversized Jeans - Womens    |      1274 |           50.00|
+| Pink Fluro Polkadot Socks - Mens |      1258 |           50.00|
+| Teal Button Up Shirt - Mens      |      1242 |           49.00|
+| Khaki Suit Jacket - Womens       |      1247 |           49.00|
+| Cream Relaxed Jeans - Womens     |      1243 |           49.00|
+| Black Straight Jeans - Womens    |      1246 |           49.00|
+| White Striped Socks - Mens       |      1243 |           49.00|
 
 #### 10. What is the most common combination of at least 1 quantity of any 3 products in a single transaction?
 
@@ -521,11 +505,10 @@ LIMIT 1;
 
 ##### Answer
 
-| product_1 | product_2 | product_3 | frequency |
-|-----------|-----------|-----------|-----------|
-| Blue Polo Shirt - Mens | Navy Solid Socks - Mens | White Tee Shirt - Mens | 352 |
+|       product_1        |          product_2           |          product_3          | frequency|
+|------------------------+------------------------------+-----------------------------+----------|
+| White Tee Shirt - Mens | Grey Fashion Jacket - Womens | Teal Button Up Shirt - Mens |       352|
 
-The most common product bundle purchased together in a single transaction includes **Blue Polo Shirt (Mens), Navy Solid Socks (Mens), and White Tee Shirt (Mens)**.
 
 ### Reporting Challenge
 
@@ -544,8 +527,6 @@ My approach to the solution would be:
 - Produce outputs corresponding to the previous analysis questions
 
 The script below uses a **single reporting month parameter**, allowing the entire analysis to be rerun for different months.
-
----
 
 #### Monthly Reporting SQL Script
 
@@ -695,7 +676,6 @@ SELECT DATE '2021-02-01' AS month_start
 
 All calculations will automatically adjust for the new month.
 
----
 
 #### Key Design Idea
 
@@ -704,8 +684,6 @@ Instead of writing new queries every month, the report:
 - Defines a **single month parameter**
 - Filters the dataset using that parameter
 - Reuses the same aggregations for each report table
-
-This approach makes the report **fully repeatable and suitable for automated scheduling**.
 
 ### Bonus Challenge
 > Use a single SQL query to transform the product_hierarchy and product_prices datasets to the product_details table.
