@@ -11,14 +11,16 @@ In particular - the composition and rankings for different interests are provide
 Danny has asked for your assistance to analyse aggregated metrics for an example client and provide some high level insights about the customer list and their interests.
 
 ## Entity Relational Diagram
+
 ## Data Exploration and Cleansing
-### 1. Update the fresh_segments.interest_metrics table by modifying the month_year column to be a date data type with the start of the month
+
+### 1. Update the `fresh_segments.interest_metrics` table by modifying the `month_year` column to be a date data type with the start of the month
 ```sql
-ALTER TABLE fresh_segments.interest_metrics
-ALTER COLUMN month_year TYPE DATE
-USING TO_DATE(month_year,'MM-YYYY');
+UPDATE fresh_segments.interest_metrics
+SET month_year = TO_DATE(_month || '-' || _year, 'MM-YYYY');
 ```
-### 2. What is count of records in the fresh_segments.interest_metrics for each month_year value sorted in chronological order (earliest to latest) with the null values appearing first?
+
+### 2. What is count of records in the `fresh_segments.interest_metrics` for each month_year value sorted in chronological order (earliest to latest) with the null values appearing first?
 ```sql
 SELECT
 month_year,
@@ -30,67 +32,70 @@ ORDER BY month_year NULLS FIRST;
 
 ##### Answer
 
-| month_year | record_count |
-|-----------|--------------|
-| NULL | 1194 |
-| 2018-07-01 | 729 |
-| 2018-08-01 | 767 |
-| 2018-09-01 | 780 |
-| 2018-10-01 | 857 |
-| 2018-11-01 | 928 |
-| 2018-12-01 | 995 |
-| 2019-01-01 | 973 |
-| 2019-02-01 | 1121 |
-| 2019-03-01 | 1136 |
-| 2019-04-01 | 1091 |
-| 2019-05-01 | 857 |
-| 2019-06-01 | 824 |
-| 2019-07-01 | 864 |
-| 2019-08-01 | 1149 |
+| month_year | record_count|
+|------------|-------------|
+|            |         1194|
+| 2018-07-01 |          729|
+| 2018-08-01 |          767|
+| 2018-09-01 |          780|
+| 2018-10-01 |          857|
+| 2018-11-01 |          928|
+| 2018-12-01 |          995|
+| 2019-01-01 |          973|
+| 2019-02-01 |         1121|
+| 2019-03-01 |         1136|
+| 2019-04-01 |         1099|
+| 2019-05-01 |          857|
+| 2019-06-01 |          824|
+| 2019-07-01 |          864|
+| 2019-08-01 |         1149|
 
 ### 3. What do you think we should do with these null values in the fresh_segments.interest_metrics?
+
 My approach would be to remove NULL records because time-based analysis requires a valid month reference.
-### 4. How many interest_id values exist in the fresh_segments.interest_metrics table but not in the fresh_segments.interest_map table? What about the other way around?
+
+### 4. How many `interest_id` values exist in the `fresh_segments.interest_metrics` table but not in the `fresh_segments.interest_map` table? What about the other way around?
 
 ```sql
-SELECT COUNT(DISTINCT interest_id)
-FROM fresh_segments.interest_metrics
-WHERE interest_id NOT IN (
-SELECT id FROM fresh_segments.interest_map
-);
+SELECT
+COUNT(DISTINCT mp.id) AS map_not_in_metrics
+FROM fresh_segments.interest_map mp
+LEFT JOIN fresh_segments.interest_metrics im
+  ON mp.id::TEXT = im.interest_id
+WHERE im.interest_id IS NULL;
 ```
 ##### Answer
-| interest_ids_not_in_map |
-|------------------------|
-| 7 |
+
+| metrics_not_in_map|
+|-------------------|
+|                  0|
 
 ```sql
-SELECT COUNT(DISTINCT id)
-FROM fresh_segments.interest_map
-WHERE id NOT IN (
-SELECT interest_id FROM fresh_segments.interest_metrics
-);
+SELECT
+COUNT(DISTINCT mp.id) AS map_not_in_metrics
+FROM fresh_segments.interest_map mp
+LEFT JOIN fresh_segments.interest_metrics im
+  ON mp.id::TEXT = im.interest_id
+WHERE im.interest_id IS NULL;
 ```
 
 ##### Answer
 
-| interest_ids_not_in_metrics |
-|----------------------------|
-| 0 |
+| map_not_in_metrics|
+|-------------------|
+|                  7|
 
 ### 5. Summarise the id values in the fresh_segments.interest_map by its total record count in this table
 
 ```sql
 SELECT
-COUNT(id) AS total_records
-FROM fresh_segments.interest_map;
+    id,
+    COUNT(*) AS record_count
+FROM fresh_segments.interest_map
+GROUP BY id
+ORDER BY record_count DESC;
 ```
 
-##### Answer
-
-| total_records |
-|--------------|
-| 1209 |
 
 ### 6. What sort of table join should we perform for our analysis and why? Check your logic by checking the rows where `interest_id` = 21246 in your joined output and include all columns from `fresh_segments.interest_metrics` and all columns from `fresh_segments.interest_map` except from the id column.
 
@@ -103,44 +108,62 @@ Using a LEFT JOIN ensures that **all metric records remain in the dataset even i
 
 ```sql
 SELECT
-m.*,
-mp.interest_name,
-mp.interest_summary,
-mp.created_at,
-mp.last_modified
-FROM fresh_segments.interest_metrics m
+    im.*,
+    mp.interest_name,
+    mp.interest_summary,
+    mp.created_at,
+    mp.last_modified
+FROM fresh_segments.interest_metrics im
 LEFT JOIN fresh_segments.interest_map mp
-ON m.interest_id = mp.id
-WHERE m.interest_id = 21246;
+    ON im.interest_id = mp.id::TEXT
+WHERE im.interest_id = '21246';
 ```
 
-##### Answer
-
-| interest_id | month_year | composition | index_value | ranking | percentile_ranking | interest_name | interest_summary | created_at | last_modified |
-|------------|-----------|-------------|-------------|--------|-------------------|---------------|-----------------|------------|---------------|
-| 21246 | 2018-07-01 | ... | ... | ... | ... | Luxury Retail Shoppers | ... | 2016-05-10 | 2018-07-01 |
-| 21246 | 2018-08-01 | ... | ... | ... | ... | Luxury Retail Shoppers | ... | 2016-05-10 | 2018-07-01 |
-
----
 
 ### 7. Are there any records in your joined table where the month_year value is before the created_at value from the fresh_segments.interest_map table? Do you think these values are valid and why?
+
 ```sql
-SELECT *
-FROM fresh_segments.interest_metrics m
-JOIN fresh_segments.interest_map mp
-ON m.interest_id = mp.id
-WHERE m.month_year < mp.created_at;
+SELECT
+    im.interest_id,
+    im.month_year,
+    mp.created_at
+FROM fresh_segments.interest_metrics im
+LEFT JOIN fresh_segments.interest_map mp
+    ON im.interest_id = mp.id::TEXT
+WHERE im.month_year < mp.created_at;
 ```
 
 ##### Answer
 
-| interest_id | month_year | created_at |
-|------------|-----------|-----------|
-| 31801 | 2018-07-01 | 2018-09-15 |
-| 32704 | 2018-07-01 | 2018-10-02 |
+| interest_id | month_year |     created_at     | 
+|-------------|------------|--------------------|
+| 35903       | 2018-09-01 | 2018-09-05 18:10:03|
+| 41547       | 2018-12-01 | 2018-12-03 11:10:04|
+| 32701       | 2018-07-01 | 2018-07-06 14:35:03|
 | ... | ... | ... |
 
-These records are likely invalid because interest activity appears before the interest was officially created. They may represent backfilled or incorrectly logged metadata. 
+These records are likely invalid because interest activity appears before the interest was officially created. They may represent backfilled or incorrectly logged metadata. I would eliminate these records to help maintain temporal integrity. Otherwise, I think we can risk inflating trends or creating misleading patterns for interests that didn’t actually exist yet.
+
+```sql
+SELECT
+    im.interest_id,
+    im._month,
+    im._year,
+    im.month_year,
+    im.composition,
+    im.index_value,
+    im.ranking,
+    im.percentile_ranking,
+    map.name AS interest_name,
+    map.category,
+    map.created_at,
+    map.updated_at
+FROM fresh_segments.interest_metrics im
+JOIN fresh_segments.interest_map map
+    ON im.interest_id = map.id
+WHERE im.month_year >= map.created_at
+ORDER BY im.interest_id, im.month_year;
+```
 
 ## Questions and Answers
 
@@ -168,15 +191,15 @@ WHERE month_year IS NOT NULL
 
 ##### Answer
 
-| interest_id |
-|-------------|
-| 21057 |
-| 21246 |
-| 21471 |
-| 21548 |
-| 21674 |
-| ... |
-
+ interest_id|
+-------------|
+ 100|
+ 10008|
+ 10009|
+ 10010|
+ 101|
+ 102|
+ 10249|
 
 #### 2. Using this same total_months measure - calculate the cumulative percentage of all records starting at 14 months - which total_months value passes the 90% cumulative percentage value?
 
