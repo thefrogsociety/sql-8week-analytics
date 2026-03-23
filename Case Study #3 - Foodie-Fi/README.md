@@ -9,7 +9,9 @@ Danny finds a few smart friends to launch his new startup Foodie-Fi in 2020 and 
 Danny created Foodie-Fi with a data driven mindset and wanted to ensure all future investment decisions and new features were decided using data. This case study focuses on using subscription style digital data to answer important business questions.
 
 ## Entity Relationship Diagram
-## Data Cleaning
+
+<img width="537" height="250" alt="foodie" src="https://github.com/user-attachments/assets/d167fcca-1f64-44e0-99f6-0bec755bd8e5" />
+
 ## Data Cleaning and Initial Exploration
 
 Before starting the analysis, I first performed several exploratory checks to understand the structure and integrity of the dataset. The goal of this stage was to identify potential structural issues before applying any transformations.
@@ -72,8 +74,6 @@ ORDER BY plan_id;
 |       4 | churn|
 
 If the same `plan_id` appears multiple times, it can cause joins with other tables to produce duplicated rows.
-
----
 
 ### 4. Check for Duplicate Subscription Events
 
@@ -181,8 +181,6 @@ Trial on 2020-02-05 → basic monthly on 2020-02-12 → upgraded to pro monthly 
 
 ##### Customer 8  
 Trial on 2020-06-11 → basic monthly on 2020-06-18 → upgraded to pro monthly on 2020-08-03.
-
----
 
 #### Personal Observation
 
