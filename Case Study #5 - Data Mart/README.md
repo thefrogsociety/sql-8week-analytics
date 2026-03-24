@@ -1,4 +1,4 @@
-<img width="344" height="376" alt="5" src="https://github.com/user-attachments/assets/eac6f854-d94f-4601-bf8b-dc00b559f933" /># Case Study #5: Data Mart
+# Case Study #5: Data Mart
 ## Problem Statement
 <img width="1080" height="1080" alt="image" src="https://github.com/user-attachments/assets/3653d03e-9d8c-4f68-b894-693fc8efa378" />
 
