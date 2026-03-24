@@ -6,6 +6,7 @@ Balanced Tree Clothing Company prides themselves on providing an optimised range
 
 Danny, the CEO of this trendy fashion company has asked you to assist the team’s merchandising teams analyse their sales performance and generate a basic financial report to share with the wider business.
 ## Entity Relational Diagram
+<img width="573" height="376" alt="7" src="https://github.com/user-attachments/assets/14b3286c-d5cf-47af-97ef-b7a9397a02f7" />
 
 ## Questions and Answers
 ### High Level Sales Analysis
