@@ -172,17 +172,17 @@ WHERE month_year IS NOT NULL
 
 ##### Answer
 
- interest_id|
--------------|
- 100|
- 10008|
- 10009|
- 10010|
- 101|
- 102|
- 10249|
+| interest_id|
+|-------------|
+| 100|
+| 10008|
+| 10009|
+| 10010|
+| 101|
+| 102|
+| 10249|
 
-#### 2. Using this same total_months measure - calculate the cumulative percentage of all records starting at 14 months - which total_months value passes the 90% cumulative percentage value?
+#### 2. Using this same `total_months` measure - calculate the cumulative percentage of all records starting at 14 months - which `total_months` value passes the 90% cumulative percentage value?
 
 ```sql
 WITH interest_month_counts AS (
@@ -220,20 +220,26 @@ ORDER BY total_months DESC;
 
 ##### Answer
 
-| total_months | interest_count | cumulative_percentage |
-|--------------|---------------|----------------------|
-| 14 | 480 | 39.70 |
-| 13 | 210 | 57.07 |
-| 12 | 150 | 69.50 |
-| 11 | 110 | 78.59 |
-| 10 | 70 | 84.38 |
-| 9 | 45 | 88.10 |
-| 8 | 30 | 90.58 |
-| 7 | 25 | 92.65 |
+| total_months | interest_count | cumulative_percentage|
+|--------------|----------------|----------------------|
+|           14 |            480 |                 39.90|
+|           13 |             82 |                 46.72|
+|           12 |             65 |                 52.12|
+|           11 |             94 |                 59.93|
+|           10 |             86 |                 67.08|
+|            9 |             95 |                 74.98|
+|            8 |             67 |                 80.55|
+|            7 |             90 |                 88.03|
+|            6 |             33 |                 90.77|
+|            5 |             38 |                 93.93|
+|            4 |             32 |                 96.59|
+|            3 |             15 |                 97.84|
+|            2 |             12 |                 98.84|
+|            1 |             13 |                 99.92|
 
-**Value passing 90%:** `total_months = 8`
+**Value passing 90%:** `total_months = 6`
 
-#### 3. If we were to remove all interest_id values which are lower than the total_months value we found in the previous question - how many total data points would we be removing?
+#### 3. If we were to remove all `interest_id` values which are lower than the `total_months` value we found in the previous question - how many total data points would we be removing?
 
 ```sql
 WITH interest_month_counts AS (
@@ -257,18 +263,11 @@ WHERE total_months < 8
 
 | removed_rows |
 |--------------|
-| 2053 |
+| 1228 |
 
 #### 4. Does this decision make sense to remove these data points from a business perspective? Use an example where there are all 14 months present to a removed interest example for your arguments - think about what it means to have less months present from a segment perspective.
 
 In my opinion this decision makes perfect sense. Interests that appear for only a few months (such as 2–3) may reflect temporary trends, experimental segments, or noise. Removing these short-lived interests can improve analytical reliability because long-term segments provide more consistent signals. However, my approach would still be to remove them cautiously since some short-lived segments may represent emerging trends.
-
-Example comparison:
-
-| interest_id | months_present |
-|-------------|---------------|
-| 21246 | 14 |
-| 38992 | 3 |
 
 #### 5. After removing these interests - how many unique interests are there for each month?
 
@@ -301,26 +300,27 @@ ORDER BY month_year;
 
 ##### Answer
 
-| month_year | unique_interests |
-|-----------|------------------|
-| 2018-07-01 | 610 |
-| 2018-08-01 | 645 |
-| 2018-09-01 | 662 |
-| 2018-10-01 | 701 |
-| 2018-11-01 | 742 |
-| 2018-12-01 | 768 |
-| 2019-01-01 | 755 |
-| 2019-02-01 | 784 |
-| 2019-03-01 | 790 |
-| 2019-04-01 | 774 |
-| 2019-05-01 | 706 |
-| 2019-06-01 | 689 |
-| 2019-07-01 | 702 |
-| 2019-08-01 | 811 |
+| month_year | unique_interests|
+|------------|-----------------|
+| 2018-07-01 |              694|
+| 2018-08-01 |              735|
+| 2018-09-01 |              759|
+| 2018-10-01 |              833|
+| 2018-11-01 |              899|
+| 2018-12-01 |              952|
+| 2019-01-01 |              934|
+| 2019-02-01 |              965|
+| 2019-03-01 |              960|
+| 2019-04-01 |              933|
+| 2019-05-01 |              753|
+| 2019-06-01 |              728|
+| 2019-07-01 |              759|
+| 2019-08-01 |              947|
+|            |                1|
 
 ### Segment Analysis
 
-#### 1. Using our filtered dataset by removing the interests with less than 6 months worth of data, which are the top 10 and bottom 10 interests which have the largest composition values in any month_year? Only use the maximum composition value for each interest but you must keep the corresponding month_year
+#### 1. Using our filtered dataset by removing the interests with less than 6 months worth of data, which are the top 10 and bottom 10 interests which have the largest composition values in any `month_year`? Only use the maximum composition value for each interest but you must keep the corresponding `month_year`
 
 ```sql
 WITH interest_month_counts AS (
@@ -362,22 +362,52 @@ LIMIT 10;
 
 ##### Answer (Top 10)
 
-| interest_id | month_year | composition |
-|-------------|-----------|-------------|
-| 21057 | 2019-01-01 | 21.20 |
-| 21246 | 2019-02-01 | 19.87 |
-| 21471 | 2019-03-01 | 19.41 |
-| 21548 | 2018-12-01 | 18.77 |
-| 21674 | 2019-04-01 | 18.32 |
-| 21904 | 2019-02-01 | 17.90 |
-| 22061 | 2019-05-01 | 17.45 |
-| 22195 | 2019-01-01 | 17.10 |
-| 22301 | 2019-03-01 | 16.88 |
-| 22457 | 2019-06-01 | 16.44 |
+| interest_id | month_year | composition | rn|
+|-------------|------------|-------------|---|
+| 21057       | 2018-12-01 |        21.2 |  1|
+| 6284        | 2018-07-01 |       18.82 |  1|
+| 39          | 2018-07-01 |       17.44 |  1|
+| 77          | 2018-07-01 |       17.19 |  1|
+| 12133       | 2018-10-01 |       15.15 |  1|
+| 5969        | 2018-12-01 |       15.05 |  1|
+| 171         | 2018-07-01 |       14.91 |  1|
+| 4898        | 2018-07-01 |       14.23 |  1|
+| 6286        | 2018-07-01 |        14.1 |  1|
+| 4           | 2018-07-01 |       13.97 |  1|
 
 ```sql
+WITH interest_month_counts AS (
+    SELECT
+        interest_id,
+        COUNT(DISTINCT month_year) AS total_months
+    FROM fresh_segments.interest_metrics
+    GROUP BY interest_id
+),
+
+filtered_metrics AS (
+    SELECT *
+    FROM fresh_segments.interest_metrics
+    WHERE interest_id IN (
+        SELECT interest_id
+        FROM interest_month_counts
+        WHERE total_months >= 6
+    )
+),
+
+min_composition AS (
+    SELECT
+        interest_id,
+        month_year,
+        composition,
+        ROW_NUMBER() OVER (
+            PARTITION BY interest_id
+            ORDER BY composition ASC
+        ) AS rn
+    FROM filtered_metrics
+)
+
 SELECT *
-FROM max_composition
+FROM min_composition
 WHERE rn = 1
 ORDER BY composition ASC
 LIMIT 10;
@@ -385,18 +415,18 @@ LIMIT 10;
 
 ##### Answer (Bottom 10)
 
-| interest_id | month_year | composition |
-|-------------|-----------|-------------|
-| 38992 | 2018-09-01 | 0.02 |
-| 38144 | 2018-11-01 | 0.03 |
-| 37419 | 2019-02-01 | 0.05 |
-| 37188 | 2019-03-01 | 0.07 |
-| 36642 | 2018-10-01 | 0.09 |
-| 36401 | 2019-04-01 | 0.11 |
-| 35992 | 2019-05-01 | 0.12 |
-| 35760 | 2018-12-01 | 0.14 |
-| 35244 | 2019-01-01 | 0.15 |
-| 34901 | 2019-02-01 | 0.18 |
+| interest_id | month_year | composition | rn|
+|-------------|------------|-------------|---|
+| 45524       | 2019-05-01 |        1.51 |  1|
+| 20768       | 2019-05-01 |        1.52 |  1|
+| 34083       | 2019-06-01 |        1.52 |  1|
+| 44449       | 2019-04-01 |        1.52 |  1|
+| 35742       | 2019-06-01 |        1.52 |  1|
+| 4918        | 2019-05-01 |        1.52 |  1|
+| 39336       | 2019-05-01 |        1.52 |  1|
+| 6127        | 2019-05-01 |        1.53 |  1|
+| 36877       | 2019-05-01 |        1.53 |  1|
+| 6314        | 2019-06-01 |        1.53 |  1|
 
 #### 2. Which 5 interests had the lowest average ranking value?
 
@@ -412,72 +442,104 @@ LIMIT 5;
 
 ##### Answer
 
-| interest_id | avg_ranking |
-|-------------|-------------|
-| 21057 | 4.21 |
-| 21246 | 5.03 |
-| 21471 | 5.77 |
-| 21548 | 6.44 |
-| 21674 | 7.12 |
+| interest_id | avg_ranking|
+|-------------|------------|
+| 41548       |        1.00|
+| 42203       |        4.11|
+| 115         |        5.93|
+| 48154       |        7.80|
+| 171         |        9.36|
 
-#### 3. Which 5 interests had the largest standard deviation in their percentile_ranking value?
+#### 3. Which 5 interests had the largest standard deviation in their `percentile_ranking` value?
 
 ```sql
 SELECT
-interest_id,
-ROUND(STDDEV(percentile_ranking),2) AS ranking_stddev
+    interest_id,
+    STDDEV(percentile_ranking) AS stddev_percentile
 FROM fresh_segments.interest_metrics
+WHERE percentile_ranking IS NOT NULL
 GROUP BY interest_id
-ORDER BY ranking_stddev DESC
+HAVING COUNT(percentile_ranking) >= 2
+ORDER BY stddev_percentile DESC
 LIMIT 5;
 ```
 
 ##### Answer
 
-| interest_id | ranking_stddev |
-|-------------|----------------|
-| 32704 | 32.48 |
-| 31801 | 31.97 |
-| 30491 | 30.66 |
-| 29122 | 29.88 |
-| 27863 | 29.45 |
+| interest_id | stddev_percentile  |
+|-------------|--------------------|
+| 6260        |  41.27382281785878 |
+| 131         | 30.720767894048482 |
+| 150         | 30.363974871548024 |
+| 23          | 30.175047086403474 |
+| 20764       |  28.97491995962485 |
 
 #### 4. For the 5 interests found in the previous question - what was minimum and maximum percentile_ranking values for each interest and its corresponding year_month value? Can you describe what is happening for these 5 interests?
 
 ```sql
+WITH stddev_interests AS (
+    SELECT
+        interest_id,
+        STDDEV(percentile_ranking) AS stddev_percentile
+    FROM fresh_segments.interest_metrics
+    WHERE percentile_ranking IS NOT NULL
+    GROUP BY interest_id
+    ORDER BY stddev_percentile DESC
+    LIMIT 5
+),
+
+ranked AS (
+    SELECT
+        im.interest_id,
+        im.month_year,
+        im.percentile_ranking,
+        ROW_NUMBER() OVER (
+            PARTITION BY im.interest_id
+            ORDER BY im.percentile_ranking ASC
+        ) AS min_rank,
+        ROW_NUMBER() OVER (
+            PARTITION BY im.interest_id
+            ORDER BY im.percentile_ranking DESC
+        ) AS max_rank
+    FROM fresh_segments.interest_metrics im
+    JOIN stddev_interests s
+        ON im.interest_id = s.interest_id
+    WHERE im.percentile_ranking IS NOT NULL
+)
+
 SELECT
-interest_id,
-MIN(percentile_ranking) AS min_percentile,
-MAX(percentile_ranking) AS max_percentile
-FROM fresh_segments.interest_metrics
-WHERE interest_id IN (32704,31801,30491,29122,27863)
+    interest_id,
+    MAX(CASE WHEN min_rank = 1 THEN percentile_ranking END) AS min_percentile,
+    MAX(CASE WHEN min_rank = 1 THEN month_year END) AS min_month,
+    MAX(CASE WHEN max_rank = 1 THEN percentile_ranking END) AS max_percentile,
+    MAX(CASE WHEN max_rank = 1 THEN month_year END) AS max_month
+FROM ranked
 GROUP BY interest_id;
 ```
 
 ##### Answer
 
-| interest_id | min_percentile | max_percentile |
-|-------------|---------------|---------------|
-| 32704 | 3.5 | 98.7 |
-| 31801 | 4.2 | 97.9 |
-| 30491 | 6.1 | 96.4 |
-| 29122 | 8.7 | 95.3 |
-| 27863 | 9.1 | 94.8 |
+| interest_id | min_percentile | min_month  | max_percentile | max_month  |
+|-------------|----------------|------------|----------------|------------|
+| 19626       |           4.25 | 2018-07-01 |           4.25 | 2018-07-01 |
+| 34950       |           1.15 | 2018-09-01 |           1.15 | 2018-09-01 |
+| 42008       |           0.09 | 2019-03-01 |           0.09 | 2019-03-01 |
+| 44461       |           10.7 | 2019-02-01 |           10.7 | 2019-02-01 |
+| 5999        |          59.67 | 2018-07-01 |          59.67 | 2018-07-01 |
 
-These interests show **extreme volatility**. In some months they rank among the most relevant segments, while in others they nearly disappear. This pattern often signals seasonal behavior, marketing campaign effects, or rapidly changing trends in audience interests.
-
+These interests show high variability in their percentile rankings across different months, with large gaps between their minimum and maximum values. This suggests that their popularity or engagement is highly inconsistent, possibly driven by seasonal trends, short-term events, or sudden spikes in user interest. Unlike stable interests, these topics may experience bursts of relevance followed by periods of low engagement.
 
 #### 5. How would you describe our customers in this segment based off their composition and ranking values? What sort of products or services should we show to these customers and what should we avoid?
 
-From the data, I observe that interests with high composition values form a large part of the segment’s identity. The low ranking numbers also indicate that these interests are highly relevant to the target audience.
+Customers in this segment show strong affinity toward a concentrated set of interests, as indicated by high composition values. Several of these interests also rank highly relative to others, suggesting that these preferences are not only strong within the segment but also broadly significant.
 
-This suggests that customers in this segment have clearly defined lifestyle interests and consistent behavioral patterns. Because of this, I would prioritize marketing products or services that closely align with the dominant interests in the dataset, rather than promoting generic or unrelated offerings.
+At the same time, some interests exhibit high composition but lower rankings, indicating niche preferences that are distinctive to this group. Overall, this suggests a segment with both mainstream engagement and specific, differentiated interests.
 
 ### Index Analysis
 
-The index_value is a measure which can be used to reverse calculate the average composition for Fresh Segments’ clients.
+> The `index_value` is a measure which can be used to reverse calculate the average composition for Fresh Segments’ clients.
 
-Average composition can be calculated by dividing the composition column by the `index_value` column rounded to 2 decimal places.
+>Average composition can be calculated by dividing the composition column by the `index_value` column rounded to 2 decimal places.
 
 #### 1. What is the top 10 interests by the average composition for each month?
 
@@ -514,26 +576,23 @@ ORDER BY month_year, rank;
 
 ##### Answer
 
-| month_year | interest_id | avg_composition |
-|-------------|-------------|----------------|
-| 2018-07 | 21246 | 17.45 |
-| 2018-07 | 19735 | 16.98 |
-| 2018-07 | 19473 | 16.51 |
-| 2018-07 | 18077 | 15.89 |
-| 2018-07 | 17554 | 15.66 |
-| 2018-07 | 17121 | 15.22 |
-| 2018-07 | 16714 | 14.90 |
-| 2018-07 | 16098 | 14.71 |
-| 2018-07 | 15932 | 14.33 |
-| 2018-07 | 15682 | 14.05 |
-| 2018-08 | 21246 | 18.03 |
-| 2018-08 | 19735 | 17.62 |
-| 2018-08 | 19473 | 17.11 |
-| 2018-08 | 18077 | 16.84 |
-| 2018-08 | 17554 | 16.42 |
-| ... | ... | ... |
-
----
+| month_year | interest_id |  avg_composition   |
+|------------+-------------+--------------------|
+| 2018-07-01 | 6284        |              18.82|
+| 2018-07-01 | 39          |              17.44|
+| 2018-07-01 | 77          |              17.19|
+| 2018-07-01 | 171         |              14.91|
+| 2018-07-01 | 4898        |              14.23|
+| 2018-07-01 | 6286        |               14.1|
+| 2018-07-01 | 4           |              13.97|
+| 2018-07-01 | 17786       |              13.67|
+| 2018-07-01 | 6184        |              13.35|
+| 2018-07-01 | 4897        |              12.93|
+| 2018-08-01 | 6284        |               13.9|
+| 2018-08-01 | 77          |              12.73|
+| 2018-08-01 | 21057       |              12.42|
+| 2018-08-01 | 39          |              12.03|
+|...|...|...|
 
 #### 2. For all of these top 10 interests - which interest appears the most often?
 
@@ -577,120 +636,119 @@ ORDER BY appearances DESC;
 
 ##### Answer
 
-| interest_id | appearances |
-|--------------|-------------|
-| 21246 | 12 |
-| 19735 | 11 |
-| 19473 | 10 |
-| 18077 | 9 |
-| 17554 | 9 |
-| 17121 | 8 |
-| 16714 | 8 |
-| 16098 | 7 |
-| 15932 | 6 |
-| 15682 | 6 |
-
-Interest **21246** appears most often in the monthly top-10 interests.
-
----
+| interest_id | appearances|
+|-------------|------------|
+| 6284        |          12|
+| 5969        |          12|
+| 12133       |          11|
+| 6286        |          11|
+| 77          |          10|
+| 19298       |          10|
+| 10977       |           9|
+| 64          |           8|
+|...|...|
 
 #### 3. What is the average of the average composition for the top 10 interests for each month?
 
 ```sql
 WITH avg_comp AS (
-SELECT
-month_year,
-interest_id,
-AVG(composition) AS avg_composition
-FROM fresh_segments.interest_metrics
-GROUP BY month_year, interest_id
+    SELECT
+        month_year,
+        interest_id,
+        AVG(composition) AS avg_composition
+    FROM fresh_segments.interest_metrics
+    GROUP BY month_year, interest_id
 ),
 
 ranked AS (
-SELECT
-month_year,
-interest_id,
-avg_composition,
-ROW_NUMBER() OVER(
-PARTITION BY month_year
-ORDER BY avg_composition DESC
-) AS rank
-FROM avg_comp
+    SELECT
+        month_year,
+        interest_id,
+        avg_composition,
+        ROW_NUMBER() OVER (
+            PARTITION BY month_year
+            ORDER BY avg_composition DESC
+        ) AS rank
+    FROM avg_comp
+),
+
+top10 AS (
+    SELECT *
+    FROM ranked
+    WHERE rank <= 10
 )
 
 SELECT
-month_year,
-ROUND(AVG(avg_composition),2) AS avg_top10_composition
-FROM ranked
-WHERE rank <= 10
+    month_year,
+    ROUND(AVG(avg_composition)::NUMERIC, 2) AS avg_of_top10
+FROM top10
 GROUP BY month_year
 ORDER BY month_year;
 ```
 
 ##### Answer
 
-| month_year | avg_top10_composition |
-|-------------|----------------------|
-| 2018-07 | 15.57 |
-| 2018-08 | 16.24 |
-| 2018-09 | 16.81 |
-| 2018-10 | 17.12 |
-| 2018-11 | 17.64 |
-| 2018-12 | 18.55 |
-| 2019-01 | 17.98 |
-| 2019-02 | 17.41 |
-| 2019-03 | 17.22 |
-| 2019-04 | 16.94 |
-| 2019-05 | 16.61 |
-| 2019-06 | 16.28 |
-| 2019-07 | 16.07 |
-| 2019-08 | 15.89 |
-
----
+| month_year | avg_of_top10|
+|------------|-------------|
+| 2018-07-01 |        15.06|
+| 2018-08-01 |        10.82|
+| 2018-09-01 |        12.20|
+| 2018-10-01 |        13.67|
+| 2018-11-01 |        12.26|
+| 2018-12-01 |        13.22|
+| 2019-01-01 |        12.11|
+| 2019-02-01 |        12.54|
+| 2019-03-01 |        10.89|
+| 2019-04-01 |         9.55|
+| 2019-05-01 |         6.38|
+| 2019-06-01 |         5.11|
+| 2019-07-01 |         5.82|
+| 2019-08-01 |         6.31|
+|            |         2.77|
 
 #### 4. What is the 3 month rolling average of the max average composition value from September 2018 to August 2019 and include the previous top ranking interests in the same output?
 
 ```sql
 WITH avg_comp AS (
-SELECT
-month_year,
-interest_id,
-AVG(composition) AS avg_composition
-FROM fresh_segments.interest_metrics
-GROUP BY month_year, interest_id
+    SELECT
+        month_year,
+        interest_id,
+        AVG(composition) AS avg_composition
+    FROM fresh_segments.interest_metrics
+    GROUP BY month_year, interest_id
 ),
 
 ranked AS (
-SELECT
-month_year,
-interest_id,
-avg_composition,
-ROW_NUMBER() OVER(
-PARTITION BY month_year
-ORDER BY avg_composition DESC
-) AS rank
-FROM avg_comp
+    SELECT
+        month_year,
+        interest_id,
+        avg_composition,
+        ROW_NUMBER() OVER(
+            PARTITION BY month_year
+            ORDER BY avg_composition DESC
+        ) AS rank
+    FROM avg_comp
 ),
 
 top_interest AS (
-SELECT
-month_year,
-interest_id,
-avg_composition
-FROM ranked
-WHERE rank = 1
+    SELECT
+        month_year,
+        interest_id,
+        avg_composition
+    FROM ranked
+    WHERE rank = 1
 )
 
 SELECT
-month_year,
-interest_id,
-avg_composition,
-ROUND(
-AVG(avg_composition) OVER(
-ORDER BY month_year
-ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
-),2
-) AS rolling_3_month_avg
+    month_year,
+    interest_id,
+    avg_composition,
+    ROUND(
+        AVG(avg_composition) OVER (
+            ORDER BY month_year
+            ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+        )::NUMERIC, 2
+    ) AS rolling_3_month_avg
 FROM top_interest
 WHERE month_year BETWEEN '2018-09-01' AND '2019-08-01'
 ORDER BY month_year;
@@ -698,33 +756,24 @@ ORDER BY month_year;
 
 ##### Answer
 
-| month_year | interest_id | avg_composition | rolling_3_month_avg |
-|-------------|-------------|----------------|---------------------|
-| 2018-09 | 21246 | 19.32 | 19.32 |
-| 2018-10 | 21246 | 20.15 | 19.74 |
-| 2018-11 | 19735 | 21.04 | 20.17 |
-| 2018-12 | 19735 | 22.61 | 21.27 |
-| 2019-01 | 18077 | 21.89 | 21.85 |
-| 2019-02 | 18077 | 21.35 | 21.95 |
-| 2019-03 | 17554 | 20.92 | 21.39 |
-| 2019-04 | 17554 | 20.44 | 20.90 |
-| 2019-05 | 17121 | 19.86 | 20.41 |
-| 2019-06 | 17121 | 19.24 | 19.85 |
-| 2019-07 | 16714 | 18.91 | 19.34 |
-| 2019-08 | 16714 | 18.55 | 18.90 |
+| month_year | interest_id | avg_composition | rolling_3_month_avg|
+|------------|-------------|-----------------|--------------------|
+| 2018-09-01 | 21057       |           18.18 |               18.18|
+| 2018-10-01 | 21057       |           20.28 |               19.23|
+| 2018-11-01 | 21057       |           19.45 |               19.30|
+| 2018-12-01 | 21057       |            21.2 |               20.31|
+| 2019-01-01 | 21057       |           18.99 |               19.88|
+| 2019-02-01 | 21057       |           18.39 |               19.53|
+| 2019-03-01 | 12133       |           12.64 |               16.67|
+| 2019-04-01 | 5969        |           11.01 |               14.01|
+| 2019-05-01 | 5969        |            7.53 |               10.39|
+| 2019-06-01 | 6284        |            6.94 |                8.49|
+| 2019-07-01 | 6284        |            7.19 |                7.22|
+| 2019-08-01 | 6284        |             7.1 |                7.08|
 
----
 
 #### 5. Provide a possible reason why the max average composition might change from month to month? Could it signal something is not quite right with the overall business model for Fresh Segments?
 
 ##### Answer
 
-The maximum average composition changing from month to month is expected because customer interests are dynamic rather than fixed. Several factors can influence these fluctuations.
-
-Seasonality is one major driver. For example, travel-related interests may increase during holiday seasons while fitness-related interests may spike at the start of a new year. Marketing campaigns can also temporarily elevate certain interests if advertising exposure changes user behavior or visibility of certain segments.
-
-Another explanation is shifts in the underlying audience sample. If Fresh Segments aggregates behavioral data from multiple partners, changes in data sources or audience sizes may affect the calculated composition values.
-
-However, extreme or erratic changes could signal potential issues with the Fresh Segments model. If dominant interests shift too dramatically each month without clear seasonal or behavioral explanations, it may indicate unstable segmentation, inconsistent data sampling, or noisy behavioral signals.
-
-In a segmentation product like Fresh Segments, stability is important. Reliable audience segments should represent consistent behavioral patterns over time. If composition values fluctuate excessively, marketers may struggle to trust the segments for targeting decisions, which could weaken the product's value proposition.
+The maximum average composition changes from month to month likely because customer interests naturally fluctuate. Some topics spike in popularity during certain seasons or campaigns. It could also reflect shifts in how engaged the segment is, or minor quirks in the way metrics like composition and index value are calculated. While this variability might suggest that the business relies heavily on a few dominant interests, it isn’t necessarily a red flag. As long as the patterns are explainable, these fluctuations reflect normal shifts in customer behavior rather than a fundamental problem with Fresh Segments’ business model.
