@@ -7,6 +7,7 @@ Clique Bait is not like your regular online seafood store - the founder and CEO 
 In this case study - you are required to support Danny’s vision and analyse his dataset and come up with creative solutions to calculate funnel fallout rates for the Clique Bait online store.
 
 ## Entity Relational Diagram
+<img width="831" height="462" alt="6" src="https://github.com/user-attachments/assets/b5e2568a-57b3-4e31-b7fb-475693a7782e" />
 
 ## Questions and Answers
 
