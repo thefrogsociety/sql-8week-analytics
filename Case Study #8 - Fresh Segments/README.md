@@ -11,6 +11,7 @@ In particular - the composition and rankings for different interests are provide
 Danny has asked for your assistance to analyse aggregated metrics for an example client and provide some high level insights about the customer list and their interests.
 
 ## Entity Relational Diagram
+<img width="584" height="408" alt="8" src="https://github.com/user-attachments/assets/38cb6073-c652-4965-955e-9308a25995c3" />
 
 ## Data Exploration and Cleansing
 
@@ -50,9 +51,9 @@ ORDER BY month_year NULLS FIRST;
 | 2019-07-01 |          864|
 | 2019-08-01 |         1149|
 
-### 3. What do you think we should do with these null values in the fresh_segments.interest_metrics?
+### 3. What do you think we should do with these null values in the `fresh_segments.interest_metrics`?
 
-My approach would be to remove NULL records because time-based analysis requires a valid month reference.
+I treat null values as indicators of where metrics could not be computed rather than simply missing data. I keep them when examining data coverage, cold-start behavior, or quality issues, but exclude them when calculating averages, ranking interests, or analyzing trends to ensure results reflect only valid, computed values.
 
 ### 4. How many `interest_id` values exist in the `fresh_segments.interest_metrics` table but not in the `fresh_segments.interest_map` table? What about the other way around?
 
@@ -85,7 +86,7 @@ WHERE im.interest_id IS NULL;
 |-------------------|
 |                  7|
 
-### 5. Summarise the id values in the fresh_segments.interest_map by its total record count in this table
+### 5. Summarise the id values in the `fresh_segments.interest_map` by its total record count in this table
 
 ```sql
 SELECT
@@ -95,7 +96,6 @@ FROM fresh_segments.interest_map
 GROUP BY id
 ORDER BY record_count DESC;
 ```
-
 
 ### 6. What sort of table join should we perform for our analysis and why? Check your logic by checking the rows where `interest_id` = 21246 in your joined output and include all columns from `fresh_segments.interest_metrics` and all columns from `fresh_segments.interest_map` except from the id column.
 
@@ -120,7 +120,7 @@ WHERE im.interest_id = '21246';
 ```
 
 
-### 7. Are there any records in your joined table where the month_year value is before the created_at value from the fresh_segments.interest_map table? Do you think these values are valid and why?
+### 7. Are there any records in your joined table where the `month_year` value is before the `created_at` value from the `fresh_segments.interest_map` table? Do you think these values are valid and why?
 
 ```sql
 SELECT
@@ -142,28 +142,9 @@ WHERE im.month_year < mp.created_at;
 | 32701       | 2018-07-01 | 2018-07-06 14:35:03|
 | ... | ... | ... |
 
-These records are likely invalid because interest activity appears before the interest was officially created. They may represent backfilled or incorrectly logged metadata. I would eliminate these records to help maintain temporal integrity. Otherwise, I think we can risk inflating trends or creating misleading patterns for interests that didn’t actually exist yet.
-
-```sql
-SELECT
-    im.interest_id,
-    im._month,
-    im._year,
-    im.month_year,
-    im.composition,
-    im.index_value,
-    im.ranking,
-    im.percentile_ranking,
-    map.name AS interest_name,
-    map.category,
-    map.created_at,
-    map.updated_at
-FROM fresh_segments.interest_metrics im
-JOIN fresh_segments.interest_map map
-    ON im.interest_id = map.id
-WHERE im.month_year >= map.created_at
-ORDER BY im.interest_id, im.month_year;
-```
+Yes, there are records where `month_year` is earlier than created_at.
+These are likely not valid under normal assumptions, because metrics should not exist before the interest itself is created.
+However, if `created_at` reflects when the interest was added to the system (rather than when it first existed in reality), then these records could be explained by historical backfilling or delayed data entry.
 
 ## Questions and Answers
 
