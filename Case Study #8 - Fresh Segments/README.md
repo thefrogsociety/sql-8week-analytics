@@ -99,12 +99,12 @@ ORDER BY record_count DESC;
 
 ### 6. What sort of table join should we perform for our analysis and why? Check your logic by checking the rows where `interest_id` = 21246 in your joined output and include all columns from `fresh_segments.interest_metrics` and all columns from `fresh_segments.interest_map` except from the id column.
 
-A **LEFT JOIN from `interest_metrics` to `interest_map`** should be used.
+A `LEFT JOIN` from `interest_metrics` to `interest_map` should be used.
 
 `interest_metrics` is the main analytical table containing the monthly measurements (composition, index_value, ranking, etc.).  
 `interest_map` is a lookup table that adds descriptive metadata (interest_name, summary, created_at).
 
-Using a LEFT JOIN ensures that **all metric records remain in the dataset even if some interest_id values do not exist in the mapping table**. This prevents accidental data loss during analysis.
+Using a `LEFT JOIN` ensures that **all metric records remain in the dataset even if some interest_id values do not exist in the mapping table**. This prevents accidental data loss during analysis.
 
 ```sql
 SELECT
@@ -142,7 +142,7 @@ WHERE im.month_year < mp.created_at;
 | 32701       | 2018-07-01 | 2018-07-06 14:35:03|
 | ... | ... | ... |
 
-Yes, there are records where `month_year` is earlier than created_at.
+Yes, there are records where `month_year` is earlier than `created_at`.
 These are likely not valid under normal assumptions, because metrics should not exist before the interest itself is created.
 However, if `created_at` reflects when the interest was added to the system (rather than when it first existed in reality), then these records could be explained by historical backfilling or delayed data entry.
 
